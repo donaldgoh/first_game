@@ -1,0 +1,62 @@
+[gd_scene format=3 uid="uid://6ncunemo5qer"]
+
+[node name="RoomShop" type="Node2D" unique_id=1582756990]
+
+[node name="Floor" type="TileMapLayer" parent="." unique_id=1983484240]
+z_index = -2
+
+[node name="Walls" type="TileMapLayer" parent="." unique_id=1523492161]
+
+[node name="Decorations" type="Node2D" parent="." unique_id=1046393428]
+
+[node name="ExitNorth" type="Node2D" parent="." unique_id=913978628]
+
+[node name="Seal" type="Node2D" parent="ExitNorth" unique_id=787830488]
+
+[node name="Lock" type="Node2D" parent="ExitNorth" unique_id=1703243060]
+visible = false
+
+[node name="StaticBody2D" type="StaticBody2D" parent="ExitNorth/Lock" unique_id=1874137738]
+position = Vector2(640, 96)
+collision_layer = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExitNorth/Lock/StaticBody2D" unique_id=249326672]
+
+[node name="ExitSouth" type="Node2D" parent="." unique_id=1300071856]
+
+[node name="Seal" type="Node2D" parent="ExitSouth" unique_id=1375796437]
+
+[node name="Lock" type="Node2D" parent="ExitSouth" unique_id=1781638302]
+visible = false
+
+[node name="StaticBody2D" type="StaticBody2D" parent="ExitSouth/Lock" unique_id=1030498]
+position = Vector2(640, 800)
+collision_layer = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExitSouth/Lock/StaticBody2D" unique_id=856761639]
+
+[node name="ExitEast" type="Node2D" parent="." unique_id=410431568]
+
+[node name="Seal" type="Node2D" parent="ExitEast" unique_id=1155585335]
+
+[node name="Lock" type="Node2D" parent="ExitEast" unique_id=1864985145]
+visible = false
+
+[node name="StaticBody2D" type="StaticBody2D" parent="ExitEast/Lock" unique_id=376379986]
+position = Vector2(1184, 448)
+collision_layer = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExitEast/Lock/StaticBody2D" unique_id=1801392396]
+
+[node name="ExitWest" type="Node2D" parent="." unique_id=1851536514]
+
+[node name="Seal" type="Node2D" parent="ExitWest" unique_id=1685662735]
+
+[node name="Lock" type="Node2D" parent="ExitWest" unique_id=263766360]
+visible = false
+
+[node name="StaticBody2D" type="StaticBody2D" parent="ExitWest/Lock" unique_id=243651786]
+position = Vector2(96, 448)
+collision_layer = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExitWest/Lock/StaticBody2D" unique_id=1314250533]

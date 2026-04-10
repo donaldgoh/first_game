@@ -1,0 +1,64 @@
+[gd_scene format=3 uid="uid://b182hfw551yf5"]
+
+[ext_resource type="Script" uid="uid://bmrrr6uw1dju3" path="res://scripts/main_menu.gd" id="1_l6cm7"]
+
+[node name="root" type="Control" unique_id=2060765180]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_l6cm7")
+
+[node name="FullRect" type="ColorRect" parent="." unique_id=1257532545]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.29219002, 0.29219005, 0.29219002, 1)
+
+[node name="BG" type="ColorRect" parent="." unique_id=347978871]
+layout_mode = 0
+offset_top = 1.0
+offset_bottom = 1.0
+color = Color(0, 0, 0, 1)
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=1451785943]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -68.0
+offset_top = -46.5
+offset_right = 68.0
+offset_bottom = 46.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="VBox" unique_id=904780038]
+layout_mode = 2
+text = "CURSED HARVEST"
+horizontal_alignment = 1
+
+[node name="StartButton" type="Button" parent="VBox" unique_id=1827890899]
+layout_mode = 2
+text = "Start Game"
+
+[node name="UpgradeButton" type="Button" parent="VBox" unique_id=470709536]
+layout_mode = 2
+text = "Upgrades"
+
+[node name="SettingsButton" type="Button" parent="VBox" unique_id=1159977748]
+layout_mode = 2
+text = "Settings"
+
+[node name="QuitButton" type="Button" parent="VBox" unique_id=1159977747]
+layout_mode = 2
+text = "Quit"
+
+[node name="Controls" type="Label" parent="VBox" unique_id=84083029]
+layout_mode = 2
+text = "WASD = Move   Space = Dash   Auto-shoot"
+horizontal_alignment = 1

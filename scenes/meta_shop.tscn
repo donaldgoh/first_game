@@ -1,0 +1,93 @@
+[gd_scene format=3 uid="uid://cvjeu88kr0xd8"]
+
+[ext_resource type="Script" uid="uid://c57ty2wvkhx1s" path="res://scripts/meta_shop.gd" id="1_ltp34"]
+
+[node name="MetaShop" type="Control" unique_id=892628657]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ltp34")
+
+[node name="BG" type="ColorRect" parent="." unique_id=318256494]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.05, 0.10, 1)
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=1898897442]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="GoldLabel" type="Label" parent="VBox" unique_id=1198755981]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="ContentRow" type="HBoxContainer" parent="VBox" unique_id=918374651]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PartList" type="ScrollContainer" parent="VBox/ContentRow" unique_id=112837461]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+custom_minimum_size = Vector2(320, 0)
+
+[node name="PartListVBox" type="VBoxContainer" parent="VBox/ContentRow/PartList" unique_id=839201746]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Divider" type="VSeparator" parent="VBox/ContentRow" unique_id=563920184]
+layout_mode = 2
+
+[node name="DetailPanel" type="PanelContainer" parent="VBox/ContentRow" unique_id=293847561]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="DetailVBox" type="VBoxContainer" parent="VBox/ContentRow/DetailPanel" unique_id=748291036]
+layout_mode = 2
+
+[node name="DetailName" type="Label" parent="VBox/ContentRow/DetailPanel/DetailVBox" unique_id=182736451]
+layout_mode = 2
+text = "Select a weapon part"
+horizontal_alignment = 1
+
+[node name="DetailDesc" type="Label" parent="VBox/ContentRow/DetailPanel/DetailVBox" unique_id=273645128]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="DetailStatus" type="Label" parent="VBox/ContentRow/DetailPanel/DetailVBox" unique_id=364512837]
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="DetailUnlockBtn" type="Button" parent="VBox/ContentRow/DetailPanel/DetailVBox" unique_id=455128364]
+layout_mode = 2
+text = ""
+visible = false
+
+[node name="Buttons" type="HBoxContainer" parent="VBox" unique_id=673920481]
+layout_mode = 2
+alignment = 1
+
+[node name="PlayButton" type="Button" parent="VBox/Buttons" unique_id=1190196821]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 0)
+text = "▶ Play"
+
+[node name="MainMenuButton" type="Button" parent="VBox/Buttons" unique_id=834571209]
+layout_mode = 2
+custom_minimum_size = Vector2(200, 0)
+text = "🏠 Main Menu"

@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://cfiltq0ohl1ve"]
+
+[node name="TunnelNS" type="Node2D" unique_id=422300631]
+
+[node name="Floor" type="TileMapLayer" parent="." unique_id=523870013]
+z_index = -2
+scale = Vector2(1.5, 1.5)
+
+[node name="Walls" type="TileMapLayer" parent="." unique_id=1011449543]
+scale = Vector2(3, 3)
+
+[node name="ConnectionA" type="Node2D" parent="." unique_id=1055041222]
+
+[node name="ConnectionB" type="Node2D" parent="." unique_id=381753165]
+position = Vector2(0, 512)

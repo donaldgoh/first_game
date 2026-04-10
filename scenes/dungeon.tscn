@@ -1,0 +1,179 @@
+[gd_scene format=3 uid="uid://ch223gnk1862g"]
+
+[ext_resource type="Script" uid="uid://gwt24tecagsm" path="res://scripts/dungeon.gd" id="1_ubp1v"]
+[ext_resource type="PackedScene" uid="uid://b1jct83cih16u" path="res://scenes/player.tscn" id="2_fvacq"]
+[ext_resource type="Script" uid="uid://c24vkiauegn47" path="res://scripts/player.gd" id="3_tkjml"]
+[ext_resource type="Script" uid="uid://ng2depc5c1l3" path="res://scripts/hud.gd" id="5_tkjml"]
+[ext_resource type="Script" uid="uid://clvy3e0ahycwq" path="res://scripts/map_manager.gd" id="5_ys5p8"]
+[ext_resource type="Script" uid="uid://p87on0xq25s7" path="res://scripts/level_up_ui.gd" id="6_5hkx1"]
+[ext_resource type="Script" uid="uid://ct7ajitab32lu" path="res://scripts/minimap.gd" id="6_hsn05"]
+[ext_resource type="Script" path="res://scripts/full_map.gd" id="9_fullmap"]
+[ext_resource type="Script" uid="uid://dekbiqsot6x1f" path="res://scripts/pause_menu.gd" id="7_hsn05"]
+[ext_resource type="TileSet" uid="uid://elfsdhsuc4vd" path="res://images/Floors/tileset.tres" id="8_etlrv"]
+
+[node name="root" type="Node2D" unique_id=1981197436]
+script = ExtResource("1_ubp1v")
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=1279744909 instance=ExtResource("2_fvacq")]
+z_index = 1
+y_sort_enabled = true
+position = Vector2(640, 360)
+collision_mask = 3
+script = ExtResource("3_tkjml")
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=658938167]
+script = ExtResource("5_tkjml")
+
+[node name="M" type="MarginContainer" parent="HUD" unique_id=1880415530]
+
+[node name="V" type="VBoxContainer" parent="HUD/M" unique_id=1526144400]
+layout_mode = 2
+
+[node name="Top" type="HBoxContainer" parent="HUD/M/V" unique_id=425786735]
+layout_mode = 2
+
+[node name="HP" type="ProgressBar" parent="HUD/M/V/Top" unique_id=1295538872]
+layout_mode = 2
+value = 100.0
+show_percentage = false
+
+[node name="HPLabel" type="Label" parent="HUD/M/V/Top" unique_id=191460250]
+layout_mode = 2
+text = "100/100"
+
+[node name="Sep" type="Control" parent="HUD/M/V/Top" unique_id=1606951075]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LvLabel" type="Label" parent="HUD/M/V/Top" unique_id=989789175]
+layout_mode = 2
+text = "Lv1"
+
+[node name="GoldLabel" type="Label" parent="HUD/M/V/Top" unique_id=809688106]
+layout_mode = 2
+text = "0g"
+
+[node name="XP" type="ProgressBar" parent="HUD/M/V" unique_id=1071591023]
+layout_mode = 2
+show_percentage = false
+
+[node name="LevelUpUI" type="CanvasLayer" parent="." unique_id=1501541089]
+process_mode = 3
+script = ExtResource("6_5hkx1")
+
+[node name="Panel" type="Panel" parent="LevelUpUI" unique_id=1049980166]
+clip_contents = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -470.0
+offset_top = -175.0
+offset_right = 470.0
+offset_bottom = 175.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="LevelUpUI/Panel" unique_id=400804503]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 14.0
+offset_right = -16.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="LevelUpUI/Panel/VBox" unique_id=273147786]
+layout_mode = 2
+text = "— LEVEL UP —"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="LevelUpUI/Panel/VBox" unique_id=273147787]
+layout_mode = 2
+text = "Choose your upgrade"
+horizontal_alignment = 1
+
+[node name="ItemRow" type="HBoxContainer" parent="LevelUpUI/Panel/VBox" unique_id=760764967]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="MapManager" type="Node2D" parent="." unique_id=1200195396]
+script = ExtResource("5_ys5p8")
+
+[node name="MinimapLayer" type="CanvasLayer" parent="MapManager" unique_id=178143142]
+
+[node name="Minimap" type="Control" parent="MapManager/MinimapLayer" unique_id=1170026142]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("6_hsn05")
+
+[node name="FullMapLayer" type="CanvasLayer" parent="MapManager" unique_id=881234501]
+layer = 10
+
+[node name="FullMap" type="Control" parent="MapManager/FullMapLayer" unique_id=881234502]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+script = ExtResource("9_fullmap")
+
+[node name="PauseMenu" type="CanvasLayer" parent="." unique_id=653762587]
+process_mode = 3
+script = ExtResource("7_hsn05")
+
+[node name="Panel" type="Panel" parent="PauseMenu" unique_id=1778122205]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -120.0
+offset_right = 120.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="PauseMenu/Panel" unique_id=1751709484]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -4.0
+offset_top = -16.0
+offset_right = 4.0
+offset_bottom = 16.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="PauseMenu/Panel/VBox" unique_id=1275476607]
+layout_mode = 2
+text = "⏸ PAUSED"
+horizontal_alignment = 1
+
+[node name="ResumeButton" type="Button" parent="PauseMenu/Panel/VBox" unique_id=81100043]
+layout_mode = 2
+text = "▶ Resume"
+
+[node name="MenuButton" type="Button" parent="PauseMenu/Panel/VBox" unique_id=687617113]
+layout_mode = 2
+text = "🏠 Main Menu"
+
+[node name="SettingsButton" type="Button" parent="PauseMenu/Panel/VBox" unique_id=643966286]
+layout_mode = 2
+text = "⚙ Settings"
+
+[node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=202196250]
+tile_set = ExtResource("8_etlrv")

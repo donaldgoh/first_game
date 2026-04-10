@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://bv3momalw1p5t"]
+
+[ext_resource type="Script" uid="uid://cy2qebfuruhp8" path="res://scripts/character_select.gd" id="1_x8mhf"]
+
+[node name="root" type="Control" unique_id=1595241405]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_x8mhf")
+
+[node name="BG" type="ColorRect" parent="." unique_id=648058032]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.13314033, 0.20462325, 0.2207152, 1)
+
+[node name="VBox" type="VBoxContainer" parent="." unique_id=2075187298]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="VBox" unique_id=1703953536]
+layout_mode = 2
+
+[node name="CharRow" type="HBoxContainer" parent="VBox" unique_id=1186414433]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="VBox" unique_id=547382910]
+layout_mode = 2
+text = "← Back"

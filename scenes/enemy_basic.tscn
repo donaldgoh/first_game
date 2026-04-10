@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://bllam0ybswt7m"]
+
+[ext_resource type="Script" uid="uid://dlglirtwkyufs" path="res://scripts/enemy_base.gd" id="1_2egiq"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_2egiq"]
+size = Vector2(36, 36)
+
+[node name="root" type="CharacterBody2D" unique_id=576747446]
+z_index = 2
+collision_layer = 2
+collision_mask = 3
+script = ExtResource("1_2egiq")
+
+[node name="Visual" type="ColorRect" parent="." unique_id=593342246]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -17.999998
+offset_top = -17.999998
+offset_right = 8.181818
+offset_bottom = 8.181818
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(1.375, 1.375)
+color = Color(0.92939967, 0.8022539, 0, 1)
+
+[node name="Col" type="CollisionShape2D" parent="." unique_id=771669699]
+shape = SubResource("RectangleShape2D_2egiq")

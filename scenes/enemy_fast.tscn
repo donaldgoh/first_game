@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://dgt7v0rjwfnku"]
+
+[ext_resource type="Script" uid="uid://dlglirtwkyufs" path="res://scripts/enemy_base.gd" id="1_na3cw"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_na3cw"]
+size = Vector2(24, 24)
+
+[node name="root" type="CharacterBody2D" unique_id=80011305]
+collision_layer = 2
+collision_mask = 3
+script = ExtResource("1_na3cw")
+
+[node name="Visual" type="ColorRect" parent="." unique_id=649281822]
+offset_left = -12.0
+offset_top = -12.0
+offset_right = 12.0
+offset_bottom = 12.0
+color = Color(1, 0.5019608, 0.09803922, 1)
+
+[node name="Col" type="CollisionShape2D" parent="." unique_id=961597125]
+shape = SubResource("RectangleShape2D_na3cw")

@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://fhdmh85y4amw"]
+
+[ext_resource type="Script" uid="uid://ba5hkjtcmhghj" path="res://scripts/boss_enemy.gd" id="1_3fniw"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_3fniw"]
+size = Vector2(96, 96)
+
+[node name="root" type="CharacterBody2D" unique_id=1285354400]
+z_index = 2
+collision_layer = 3
+script = ExtResource("1_3fniw")
+
+[node name="Visual" type="ColorRect" parent="." unique_id=810864729]
+offset_left = -48.0
+offset_top = -48.0
+offset_right = 48.0
+offset_bottom = 48.0
+color = Color(0.5019608, 0, 0.9019608, 1)
+
+[node name="Col" type="CollisionShape2D" parent="." unique_id=1007600879]
+shape = SubResource("RectangleShape2D_3fniw")

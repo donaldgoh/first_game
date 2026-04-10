@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__godot__validate_script",
+      "mcp__godot__create_folder",
+      "mcp__godot__delete_file",
+      "Bash(dir \"E:\\\\Godot\\\\cursed-harvest\\\\images\" /b)",
+      "Bash(powershell -File:*)",
+      "mcp__godot__set_collision_shape",
+      "mcp__godot__run_scene",
+      "mcp__godot__stop_scene",
+      "Bash(find E:/Godot/cursed-harvest/scripts -type f -name *.gd)",
+      "Bash(head -20 grep -n \"^\\\\[node\\\\|z_index\\\\|y_sort\" \"E:\\\\Godot\\\\cursed-harvest\\\\scenes\\\\rooms\\\\4door\\\\room_4door_1.tscn\")",
+      "Bash(powershell -Command \":*)",
+      "Bash(grep -E \"\\\\.\\(gd|tscn\\)$\")",
+      "Bash(python -c ':*)",
+      "Bash(python3 -c ':*)",
+      "Bash(powershell -Command ':*)"
+    ]
+  }
+}

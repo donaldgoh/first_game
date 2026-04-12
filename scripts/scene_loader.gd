@@ -9,7 +9,10 @@ extends CanvasLayer
 # overlay with a progress bar, then switches when ready.
 # ═══════════════════════════════════════════════════════════════════════════
 
-const MIN_SHOW_SEC := 0.45   # minimum seconds to display (prevents flicker)
+# Only show the overlay if loading takes longer than this — fast scenes skip it entirely.
+const SHOW_THRESHOLD := 0.18
+# Once shown, keep it visible for at least this long so it doesn't flash.
+const MIN_SHOW_SEC   := 0.30
 
 const TIPS := [
 	"Enemies grow stronger with every floor.",
@@ -40,6 +43,8 @@ var _dot_t    : float = 0.0
 var _dot_n    : int   = 0
 var _spin_t   : float = 0.0
 var _spinner  : Label
+var _shown    : bool  = false   # true once the overlay has become visible
+var _shown_at : float = 0.0     # elapsed time when overlay first appeared
 
 # ── Init ────────────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -59,10 +64,13 @@ func goto(path: String) -> void:
 	_dot_t   = 0.0
 	_dot_n   = 0
 	_spin_t  = 0.0
-	_bar.value   = 0.0
+	_bar.value    = 0.0
 	_dot_lbl.text = "Loading"
 	_tip_lbl.text = TIPS[randi() % TIPS.size()]
-	visible = true
+	_shown        = false
+	_shown_at     = 0.0
+	# Don't show yet — we'll reveal only if loading takes too long
+	visible = false
 	ResourceLoader.load_threaded_request(path)
 
 # ── Per-frame ────────────────────────────────────────────────────────────────
@@ -84,6 +92,12 @@ func _process(delta: float) -> void:
 	var frames := ["◐", "◓", "◑", "◒"]
 	_spinner.text = frames[int(_spin_t) % 4]
 
+	# ── Show overlay only once loading is taking a noticeable time ───────
+	if not _shown and _elapsed >= SHOW_THRESHOLD and not _res_done:
+		_shown    = true
+		_shown_at = _elapsed
+		visible   = true
+
 	# ── Poll threaded load ────────────────────────────────────────────────
 	if not _res_done:
 		var progress : Array = []
@@ -93,15 +107,19 @@ func _process(delta: float) -> void:
 		match status:
 			ResourceLoader.THREAD_LOAD_LOADED:
 				_bar.value = 100.0
-				_res_done = true
+				_res_done  = true
 			ResourceLoader.THREAD_LOAD_FAILED:
 				push_error("SceneLoader: failed to load '%s'" % _target)
 				_loading = false
-				visible = false
+				visible  = false
 
-	# ── Switch when ready + min time elapsed ─────────────────────────────
-	if _res_done and _elapsed >= MIN_SHOW_SEC:
-		_switch()
+	# ── Switch when ready ─────────────────────────────────────────────────
+	# If overlay was never shown: switch immediately.
+	# If overlay was shown: wait for the minimum display duration.
+	if _res_done:
+		var min_elapsed = _shown_at + MIN_SHOW_SEC if _shown else 0.0
+		if _elapsed >= min_elapsed:
+			_switch()
 
 # ── Private ───────────────────────────────────────────────────────────────────
 func _switch() -> void:
@@ -142,7 +160,7 @@ func _build_ui() -> void:
 
 	# ── Game title ───────────────────────────────────────────────────────
 	var title := Label.new()
-	title.text = "CURSED HARVEST"
+	title.text = "REPS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 38)
 	title.add_theme_color_override("font_color", Color(0.38, 0.88, 1.0))

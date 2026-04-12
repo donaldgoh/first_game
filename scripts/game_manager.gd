@@ -43,6 +43,14 @@ var inventory_open: bool   = false       # true while the inventory UI is visibl
 # Lifetime gold (used for unlocking weapon parts)
 var lifetime_gold: int = 0
 
+# Parts the player has encountered in a run (but not necessarily unlocked)
+var seen_parts: Array = []
+
+func mark_seen(id: String):
+	if id not in seen_parts:
+		seen_parts.append(id)
+		save_meta()
+
 func _ready():
 	load_meta()
 
@@ -175,8 +183,9 @@ func save_meta():
 	var f = FileAccess.open("user://meta.dat", FileAccess.WRITE)
 	if f:
 		f.store_var({
-			"lifetime_gold": lifetime_gold,
-			"unlocked_parts": unlocked_parts,
+			"lifetime_gold":   lifetime_gold,
+			"unlocked_parts":  unlocked_parts,
+			"seen_parts":      seen_parts,
 		})
 		f.close()
 
@@ -189,3 +198,4 @@ func load_meta():
 		if data:
 			lifetime_gold  = data.get("lifetime_gold", 0)
 			unlocked_parts = data.get("unlocked_parts", [])
+			seen_parts     = data.get("seen_parts", [])

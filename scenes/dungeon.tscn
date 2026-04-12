@@ -167,13 +167,13 @@ horizontal_alignment = 1
 layout_mode = 2
 text = "▶ Resume"
 
-[node name="MenuButton" type="Button" parent="PauseMenu/Panel/VBox" unique_id=687617113]
-layout_mode = 2
-text = "🏠 Main Menu"
-
 [node name="SettingsButton" type="Button" parent="PauseMenu/Panel/VBox" unique_id=643966286]
 layout_mode = 2
 text = "⚙ Settings"
+
+[node name="MenuButton" type="Button" parent="PauseMenu/Panel/VBox" unique_id=687617113]
+layout_mode = 2
+text = "🏠 Main Menu"
 
 [node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=202196250]
 tile_set = ExtResource("8_etlrv")

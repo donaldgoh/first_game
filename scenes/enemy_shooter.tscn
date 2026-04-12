@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://cw5v3pq8dn2r1"]
+
+[ext_resource type="Script" uid="uid://bx7k2nm4qrpt9" path="res://scripts/enemy_shooter.gd" id="1_shooter"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_shooter"]
+size = Vector2(32, 32)
+
+[node name="root" type="CharacterBody2D" unique_id=301000001]
+z_index = 2
+collision_layer = 2
+collision_mask = 3
+script = ExtResource("1_shooter")
+max_health = 22
+move_speed = 55.0
+damage = 1
+xp_value = 15
+gold_value = 3
+
+[node name="Visual" type="Node2D" parent="." unique_id=301000002]
+
+[node name="Body" type="ColorRect" parent="Visual" unique_id=301000003]
+offset_left = -13.0
+offset_top = -13.0
+offset_right = 13.0
+offset_bottom = 13.0
+color = Color(0.25, 0.45, 0.95, 1)
+
+[node name="Eye" type="ColorRect" parent="Visual" unique_id=301000004]
+offset_left = -5.0
+offset_top = -12.0
+offset_right = 5.0
+offset_bottom = -4.0
+color = Color(1, 0.95, 0.2, 1)
+
+[node name="Col" type="CollisionShape2D" parent="." unique_id=301000005]
+shape = SubResource("RectangleShape2D_shooter")

@@ -39,7 +39,7 @@ grow_vertical = 2
 
 [node name="Title" type="Label" parent="VBox" unique_id=904780038]
 layout_mode = 2
-text = "CURSED HARVEST"
+text = "REPS"
 horizontal_alignment = 1
 
 [node name="StartButton" type="Button" parent="VBox" unique_id=1827890899]

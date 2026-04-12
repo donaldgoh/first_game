@@ -53,12 +53,18 @@ func _physics_process(delta):
 
 	move_and_slide()
 
-	# Deal contact damage without freezing the enemy in place
+	# Deal contact damage and steer sideways to prevent getting pinned on the player
 	for i in get_slide_collision_count():
 		if get_slide_collision(i).get_collider() == player:
 			if contact_timer <= 0:
 				player.take_damage(damage)
 				contact_timer = contact_cooldown
+			# Perpendicular steering — slide around the player instead of locking
+			var to_player = (player.global_position - global_position)
+			var perp = Vector2(-to_player.y, to_player.x).normalized()
+			if velocity.dot(perp) < 0.0:
+				perp = -perp
+			velocity = (velocity.normalized() * 0.4 + perp * 0.6).normalized() * move_speed
 			break
 
 func take_damage(amount: int):

@@ -26,7 +26,7 @@ var _facing_left: bool = false
 # ── Out-of-combat speed boost ─────────────────────────────────────────────────
 # When no enemies are alive the player moves faster to make room traversal feel
 # snappy.  We lerp the effective speed so the transition is smooth.
-const EXPLORE_SPEED_MULT := 1.6   # ×1.6 speed while rooms are clear
+const EXPLORE_SPEED_MULT := 1.2   # ×1.2 speed while rooms are clear
 const SPEED_LERP_RATE    := 5.0   # how fast the speed ramps up/down (units/s)
 var _effective_speed: float = 0.0 # smoothed speed used for movement each frame
 

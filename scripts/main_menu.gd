@@ -45,19 +45,10 @@ func _style():
 
 	# Title
 	var title = $VBox/Title
-	title.text = "CURSED HARVEST"
+	title.text = "REPS"
 	title.add_theme_font_size_override("font_size", 46)
 	title.add_theme_color_override("font_color", Color(0.38, 0.88, 1.0))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-
-	# Subtitle
-	var subtitle = Label.new()
-	subtitle.text = "dungeon roguelike"
-	subtitle.add_theme_font_size_override("font_size", 13)
-	subtitle.add_theme_color_override("font_color", Color(0.38, 0.48, 0.68))
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vb.add_child(subtitle)
-	vb.move_child(subtitle, 1)
 
 	# StartButton
 	var sb = $VBox/StartButton

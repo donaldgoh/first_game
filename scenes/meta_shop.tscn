@@ -42,7 +42,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 custom_minimum_size = Vector2(320, 0)
 
-[node name="PartListVBox" type="VBoxContainer" parent="VBox/ContentRow/PartList" unique_id=839201746]
+[node name="PartListVBox" type="HFlowContainer" parent="VBox/ContentRow/PartList" unique_id=839201746]
 layout_mode = 2
 size_flags_horizontal = 3
 

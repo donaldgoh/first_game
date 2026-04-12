@@ -3,6 +3,12 @@ extends CanvasLayer
 var boss_bar: ProgressBar = null
 var boss_label: Label = null
 
+var _dash_bar: ProgressBar = null
+var _dash_label: Label = null
+var _dash_ready_color  := Color(0.30, 0.90, 1.00)   # cyan  — ready
+var _dash_charge_color := Color(0.20, 0.55, 0.75)   # muted — charging
+var _dash_bg_color     := Color(0.04, 0.10, 0.16)
+
 # Heart display — each slot = 1 full heart (2 half-hearts)
 var _hearts_row: HBoxContainer = null
 var _heart_slots: Array = []   # Array of TextureRect, one per heart slot
@@ -17,6 +23,7 @@ func _ready():
 		pl.health_changed.connect(_on_hp)
 		_on_hp(pl.current_health, pl.max_health)
 	_create_boss_bar()
+	_create_dash_bar()
 	_style_hud()
 
 func _create_boss_bar():
@@ -58,6 +65,46 @@ func _create_boss_bar():
 	vb.add_child(boss_label)
 	vb.add_child(boss_bar)
 	add_child(vb)
+
+func _create_dash_bar():
+	# Container anchored to bottom-left
+	var hb = HBoxContainer.new()
+	hb.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	hb.offset_left   =  16
+	hb.offset_right  = 200
+	hb.offset_top    = -44
+	hb.offset_bottom = -16
+	hb.add_theme_constant_override("separation", 6)
+
+	# ⚡ icon label
+	_dash_label = Label.new()
+	_dash_label.text = "⚡"
+	_dash_label.add_theme_font_size_override("font_size", 16)
+	_dash_label.add_theme_color_override("font_color", _dash_ready_color)
+	_dash_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+	# Progress bar
+	_dash_bar = ProgressBar.new()
+	_dash_bar.custom_minimum_size = Vector2(110, 14)
+	_dash_bar.max_value = 1.0
+	_dash_bar.value = 1.0
+	_dash_bar.show_percentage = false
+
+	var bg = StyleBoxFlat.new()
+	bg.bg_color = _dash_bg_color
+	bg.border_color = Color(0.15, 0.40, 0.55)
+	bg.set_border_width_all(1)
+	bg.set_corner_radius_all(4)
+	_dash_bar.add_theme_stylebox_override("background", bg)
+
+	var fill = StyleBoxFlat.new()
+	fill.bg_color = _dash_ready_color
+	fill.set_corner_radius_all(4)
+	_dash_bar.add_theme_stylebox_override("fill", fill)
+
+	hb.add_child(_dash_label)
+	hb.add_child(_dash_bar)
+	add_child(hb)
 
 func _style_hud():
 	# Dark bg strip behind HUD
@@ -170,6 +217,22 @@ func _process(_delta):
 	var pl = get_tree().get_first_node_in_group("player")
 	if pl and "dash_timer" in pl:
 		$M/V/Top/LvLabel.modulate = Color(0.4, 1, 0.4, 1) if pl.dash_timer <= 0 else Color(0.7, 0.7, 0.7, 1)
+
+		# Dash cooldown bar
+		if _dash_bar:
+			var ready = pl.dash_timer <= 0.0
+			var fill_ratio = 1.0 - clampf(pl.dash_timer / pl.dash_cooldown, 0.0, 1.0)
+			_dash_bar.value = fill_ratio
+
+			# Swap fill colour between charging and ready
+			var fill_style = _dash_bar.get_theme_stylebox("fill") as StyleBoxFlat
+			if fill_style:
+				fill_style.bg_color = _dash_ready_color if ready else _dash_charge_color
+
+			# Flash icon when ready, dim when charging
+			if _dash_label:
+				_dash_label.add_theme_color_override("font_color",
+					_dash_ready_color if ready else Color(0.4, 0.6, 0.7))
 	var bosses = get_tree().get_nodes_in_group("enemies")
 	var boss = null
 	for e in bosses:

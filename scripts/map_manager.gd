@@ -22,8 +22,9 @@ const CELL_H  = (ROOM_IH + WALL_T * 2) * TILE   # 14 × 64 =  896
 const STEP_X  = CELL_W + COR_LEN * TILE          # 1280 + 640 = 1920
 const STEP_Y  = CELL_H + COR_LEN * TILE          #  896 + 640 = 1536
 
-const EnemySpider = preload("res://scenes/enemy_spider.tscn")
-const BossScene  = preload("res://scenes/boss_enemy.tscn")
+const EnemySpider   = preload("res://scenes/enemy_spider.tscn")
+const EnemyShooter  = preload("res://scenes/enemy_shooter.tscn")
+const BossScene     = preload("res://scenes/boss_enemy.tscn")
 const XPGem      = preload("res://scenes/xp_gem.tscn")
 const CoinScene  = preload("res://scenes/coin.tscn")
 
@@ -1005,7 +1006,10 @@ func _spawn_enemies(gp: Vector2i):
 		var safe = ir.grow(-float(TILE))
 		pos = Vector2(clamp(pos.x, safe.position.x, safe.end.x),
 					  clamp(pos.y, safe.position.y, safe.end.y))
-		var e = EnemySpider.instantiate()
+		# Pick enemy type — shooters become more common on higher floors
+		var shooter_chance = clamp((GameManager.floor_number - 1) * 0.15, 0.0, 0.45)
+		var scene = EnemyShooter if randf() < shooter_chance else EnemySpider
+		var e = scene.instantiate()
 		e.global_position = pos
 		e.enemy_died.connect(_on_enemy_died.bind(gp))
 		get_tree().current_scene.add_child(e)
@@ -1134,6 +1138,7 @@ func _spawn_treasure_chip(parent: Node2D, center: Vector2):
 	var all_parts = WeaponPartsDatabase.all()
 	if all_parts.is_empty(): return
 	var part: WeaponPart = all_parts[randi() % all_parts.size()]
+	GameManager.mark_seen(part.id)   # player can now see this chip's silhouette in collection
 
 	var chip_tex_map = {
 		"common":   "res://images/common_chip.png",

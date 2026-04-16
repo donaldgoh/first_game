@@ -347,10 +347,10 @@ func _build_stat_bbcode(part: WeaponPart) -> String:
 
 # Helper: format a multiplier stat line with green (≥1) or red (<1) colour
 func _mult_line(label: String, value: float) -> String:
-	var sign   = "×"
+	var mult_sign := "×"
 	var col    = "#66ee88" if value >= 1.0 else "#ff6655"
 	var prefix = "▲" if value >= 1.0 else "▼"
-	return "[color=%s]%s %s  %s%.2f[/color]" % [col, prefix, label, sign, value]
+	return "[color=%s]%s %s  %s%.2f[/color]" % [col, prefix, label, mult_sign, value]
 
 # ── Refresh ───────────────────────────────────────────────────────────────────
 func _refresh():

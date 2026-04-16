@@ -3,6 +3,7 @@ extends Node
 signal xp_changed(current, required)
 signal level_up(level)
 signal gold_changed(amount)
+signal keys_changed(amount)
 signal inventory_changed
 @warning_ignore("UNUSED_SIGNAL")
 signal game_over
@@ -12,6 +13,7 @@ var player_level: int = 1
 var current_xp: int = 0
 var xp_to_next: int = 100
 var gold: int = 0
+var keys: int = 0
 var floor_number: int = 1
 var enemies_killed: int = 0
 var time_alive: float = 0.0
@@ -89,11 +91,22 @@ func spend_lifetime_gold(amount: int) -> bool:
 func on_enemy_killed():
 	enemies_killed += 1
 
+func add_key() -> void:
+	keys += 1
+	emit_signal("keys_changed", keys)
+
+func use_key() -> bool:
+	if keys <= 0: return false
+	keys -= 1
+	emit_signal("keys_changed", keys)
+	return true
+
 func reset_run():
 	player_level = 1
 	current_xp = 0
 	xp_to_next = 100
 	gold = 0
+	keys = 0
 	floor_number = 1
 	enemies_killed = 0
 	time_alive = 0.0

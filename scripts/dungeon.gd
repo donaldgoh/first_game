@@ -11,11 +11,6 @@ func _ready():
 	await get_tree().process_frame
 	camera = get_node_or_null("Player/Camera2D")
 
-	# Migrate legacy active_part into the new inventory so the starting chip
-	# is immediately available to equip and combine.
-	if GameManager.active_part != "" and GameManager.equipped_parts[0] == "":
-		GameManager.equipped_parts[0] = GameManager.active_part
-
 	# Spawn the inventory CanvasLayer
 	var inv = InventoryUI.new()
 	inv.name = "InventoryUI"

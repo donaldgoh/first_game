@@ -821,7 +821,7 @@ func _add_door_trigger(gp: Vector2i, dn: String, dest_gp: Vector2i, dest_dn: Str
 	# ── Arrival: just inside the destination door trigger, pushed inward ────
 	var dsc  = 1.0 if dest_inst == null else dest_inst.scale.x
 	var dT   = float(TILE) * dsc
-	var arrive: Vector2
+	var _arrive: Vector2
 
 	# Try to land the player right next to the matching DoorTrigger in the
 	# destination room so they appear at the door they walked through.
@@ -841,24 +841,24 @@ func _add_door_trigger(gp: Vector2i, dn: String, dest_gp: Vector2i, dest_dn: Str
 		var room_center := _room_center(dest_gp)
 		match dest_dn:
 			"east":
-				arrive = Vector2(dest_trigger.global_position.x - dT * 0.5, room_center.y)
+				_arrive =Vector2(dest_trigger.global_position.x - dT * 0.5, room_center.y)
 			"west":
-				arrive = Vector2(dest_trigger.global_position.x + dT * 0.5, room_center.y)
+				_arrive =Vector2(dest_trigger.global_position.x + dT * 0.5, room_center.y)
 			"north":
-				arrive = Vector2(room_center.x, dest_trigger.global_position.y + dT * 0.5)
+				_arrive =Vector2(room_center.x, dest_trigger.global_position.y + dT * 0.5)
 			"south":
-				arrive = Vector2(room_center.x, dest_trigger.global_position.y - dT * 0.5)
+				_arrive =Vector2(room_center.x, dest_trigger.global_position.y - dT * 0.5)
 			_:
-				arrive = room_center
+				_arrive =room_center
 	else:
 		# Fallback: one tile inside the inner rect edge
 		var dir = _room_inner_rect(dest_gp)
 		match dest_dn:
-			"north": arrive = Vector2(dir.get_center().x, dir.position.y + dT)
-			"south": arrive = Vector2(dir.get_center().x, dir.end.y   - dT)
-			"east":  arrive = Vector2(dir.end.x - dT,     dir.get_center().y)
-			"west":  arrive = Vector2(dir.position.x + dT, dir.get_center().y)
-			_: arrive = _room_center(dest_gp)
+			"north": _arrive =Vector2(dir.get_center().x, dir.position.y + dT)
+			"south": _arrive =Vector2(dir.get_center().x, dir.end.y   - dT)
+			"east":  _arrive =Vector2(dir.end.x - dT,     dir.get_center().y)
+			"west":  _arrive =Vector2(dir.position.x + dT, dir.get_center().y)
+			_: _arrive =_room_center(dest_gp)
 
 	door_triggers[gp].append(area)
 
@@ -946,6 +946,7 @@ func _enter_room(gp: Vector2i):
 	rooms[gp]["visited"]   = true
 	rooms[gp]["activated"] = true
 	emit_signal("minimap_updated")
+	_check_boss_proximity(gp)
 	is_room_cleared = rooms[gp].get("cleared", false)
 	if is_room_cleared: return
 
@@ -964,6 +965,41 @@ func _enter_room(gp: Vector2i):
 			rooms[gp]["cleared"] = true
 			is_room_cleared = true
 
+func _check_boss_proximity(gp: Vector2i) -> void:
+	# Skip if this room IS the boss room
+	if rooms[gp].get("type") == RoomType.BOSS: return
+	# Check all 4 cardinal neighbours
+	for dir in [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]:
+		var nb = gp + dir
+		if rooms.has(nb) and rooms[nb].get("type") == RoomType.BOSS:
+			_show_boss_warning()
+			return
+
+func _show_boss_warning() -> void:
+	var lbl = Label.new()
+	lbl.text = "👹  A powerful presence lurks nearby..."
+	lbl.add_theme_font_size_override("font_size", 22)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.set_anchors_preset(Control.PRESET_CENTER)
+	lbl.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	lbl.modulate.a = 0.0
+
+	var canvas = CanvasLayer.new()
+	canvas.layer = 10
+	canvas.add_child(lbl)
+	get_tree().current_scene.add_child(canvas)
+
+	# Position label in the upper-center area of the screen
+	lbl.position = Vector2(-300, -180)
+	lbl.custom_minimum_size = Vector2(600, 40)
+
+	var tween = canvas.create_tween()
+	tween.tween_property(lbl, "modulate:a", 1.0, 0.6).set_trans(Tween.TRANS_SINE)
+	tween.tween_interval(2.5)
+	tween.tween_property(lbl, "modulate:a", 0.0, 0.8).set_trans(Tween.TRANS_SINE)
+	tween.tween_callback(canvas.queue_free)
+
 func _process(delta):
 	if _door_cooldown > 0.0:
 		_door_cooldown -= delta
@@ -981,8 +1017,8 @@ const ENEMY_MIN_PLAYER_DIST = 250.0   # pixels — enemies won't spawn closer th
 func _spawn_enemies(gp: Vector2i):
 	var ir     = _room_inner_rect(gp)
 	var center = ir.get_center()
-	var count  = 3 + GameManager.floor_number * 3
-	var delay  = max(0.05, 0.2 - GameManager.floor_number * 0.01)
+	var count  = 5 + GameManager.floor_number * 4
+	var delay  = max(0.04, 0.18 - GameManager.floor_number * 0.01)
 	for _i in count:
 		await get_tree().create_timer(delay).timeout
 		if not is_instance_valid(self): return
@@ -995,7 +1031,6 @@ func _spawn_enemies(gp: Vector2i):
 			var to_player = pl.global_position - pos
 			var d = to_player.length()
 			if d < ENEMY_MIN_PLAYER_DIST and d > 0.0:
-				# Reflect the position to the opposite side of center from the player.
 				var away = (center - pl.global_position).normalized()
 				dist = randf_range(
 					max(150, ENEMY_MIN_PLAYER_DIST),
@@ -1007,19 +1042,30 @@ func _spawn_enemies(gp: Vector2i):
 		pos = Vector2(clamp(pos.x, safe.position.x, safe.end.x),
 					  clamp(pos.y, safe.position.y, safe.end.y))
 		# Pick enemy type — shooters become more common on higher floors
-		var shooter_chance = clamp((GameManager.floor_number - 1) * 0.15, 0.0, 0.45)
+		var shooter_chance = clamp((GameManager.floor_number - 1) * 0.20, 0.0, 0.60)
 		var scene = EnemyShooter if randf() < shooter_chance else EnemySpider
 		var e = scene.instantiate()
 		e.global_position = pos
 		e.enemy_died.connect(_on_enemy_died.bind(gp))
 		get_tree().current_scene.add_child(e)
 		enemies_alive += 1
+		# Elite variant — bigger, faster, tougher; chance grows per floor (cap 45 %)
+		var elite_chance = clamp(0.10 + (GameManager.floor_number - 1) * 0.06, 0.0, 0.45)
+		if randf() < elite_chance:
+			e.max_health    = int(e.max_health * 2.2)
+			e.current_health = e.max_health
+			e.damage        = int(e.damage * 1.6)
+			e.move_speed    *= 1.4
+			var v = e.get_node_or_null("Visual")
+			if v:
+				v.modulate = Color(1.0, 0.55, 0.1)   # orange tint = elite
+				v.scale    = Vector2(1.5, 1.5)
 
 func _spawn_boss(gp: Vector2i):
-	var ir = _room_inner_rect(gp)
+	# Use the actual wall-tile bounds so large boss rooms are centred correctly.
+	var center = _room_world_rect(gp).get_center()
 	var b  = BossScene.instantiate()
-	b.global_position = ir.get_center() + Vector2(0, -80)
-	# Ensure boss is always above floor and wall tiles
+	b.global_position = center + Vector2(0, -100)
 	b.z_as_relative = false
 	b.z_index = clampi(int(b.global_position.y), -4095, 4095)
 	b.enemy_died.connect(_on_enemy_died.bind(gp))
@@ -1066,29 +1112,48 @@ func _on_room_cleared(gp: Vector2i):
 		_spawn_portal(gp)
 
 func _spawn_portal(gp: Vector2i):
-	var center = _room_center(gp)
-	var portal  = ColorRect.new()
-	portal.color = Color(0.4, 0.0, 0.8)
-	portal.size  = Vector2(60, 60)
-	portal.position = center - Vector2(30, 30)
-	portal.name = "Portal"
+	# Place portal at the actual centre of the boss room (wall-tile bounds).
+	var center = _room_world_rect(gp).get_center()
+
+	# ── Animated portal visual ────────────────────────────────────────────────
+	var portal = ColorRect.new()
+	portal.color    = Color(0.4, 0.0, 0.8)
+	portal.size     = Vector2(96, 96)
+	portal.position = center - Vector2(48, 48)
+	portal.name     = "Portal"
 	get_tree().current_scene.add_child(portal)
+
 	var tw = portal.create_tween()
 	tw.set_loops()
-	tw.tween_property(portal, "modulate:a", 0.4, 0.6)
-	tw.tween_property(portal, "modulate:a", 1.0, 0.6)
+	tw.tween_property(portal, "modulate:a", 0.35, 0.7)
+	tw.tween_property(portal, "modulate:a", 1.00, 0.7)
+
+	# Glow ring
+	var glow = ColorRect.new()
+	glow.color    = Color(0.6, 0.2, 1.0, 0.25)
+	glow.size     = Vector2(140, 140)
+	glow.position = center - Vector2(70, 70)
+	get_tree().current_scene.add_child(glow)
+	var gw = glow.create_tween()
+	gw.set_loops()
+	gw.tween_property(glow, "modulate:a", 0.08, 0.7)
+	gw.tween_property(glow, "modulate:a", 0.35, 0.7)
+
+	# ── Label ─────────────────────────────────────────────────────────────────
 	var lbl = Label.new()
-	lbl.text = "🌀 NEXT FLOOR"
-	lbl.add_theme_font_size_override("font_size", 18)
-	lbl.add_theme_color_override("font_color", Color(0.8, 0.5, 1.0))
+	lbl.text = "🌀  NEXT FLOOR"
+	lbl.add_theme_font_size_override("font_size", 22)
+	lbl.add_theme_color_override("font_color", Color(0.85, 0.55, 1.0))
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lbl.custom_minimum_size = Vector2(120, 30)
-	lbl.position = center + Vector2(-60, -60)
+	lbl.custom_minimum_size  = Vector2(160, 34)
+	lbl.position = center + Vector2(-80, -80)
 	get_tree().current_scene.add_child(lbl)
+
+	# ── Trigger area ──────────────────────────────────────────────────────────
 	var area = Area2D.new()
 	area.collision_layer = 0; area.collision_mask = 1; area.monitoring = true
 	var col = CollisionShape2D.new()
-	var shp = RectangleShape2D.new(); shp.size = Vector2(80, 80)
+	var shp = CircleShape2D.new(); shp.radius = 70.0
 	col.shape = shp; area.position = center; area.add_child(col)
 	area.body_entered.connect(func(body):
 		if body.is_in_group("player"):
@@ -1097,11 +1162,35 @@ func _spawn_portal(gp: Vector2i):
 
 func _spawn_treasure(parent: Node2D, gp: Vector2i):
 	var center = _room_inner_rect(gp).get_center() - room_nodes[gp].position
-	# 40 % chance to offer a random weapon chip instead of a stat item.
-	if randf() < 0.4:
-		_spawn_treasure_chip(parent, center)
-	else:
-		_spawn_treasure_item(parent, center)
+	_spawn_chest(parent, center)
+
+func _spawn_chest(parent: Node2D, center: Vector2) -> void:
+	# Pick a random weapon part — biased toward player's floor depth
+	var all_parts = WeaponPartsDatabase.all()
+	if all_parts.is_empty(): return
+
+	# Weight rarer parts slightly more on deeper floors
+	var weights: Array = []
+	for p in all_parts:
+		var w: float = 1.0
+		match p.rarity:
+			WeaponPart.Rarity.UNCOMMON: w = 1.0 + (GameManager.floor_number - 1) * 0.15
+			WeaponPart.Rarity.RARE:     w = 0.4 + (GameManager.floor_number - 1) * 0.12
+		weights.append(w)
+	var total: float = 0.0
+	for w in weights: total += w
+	var roll := randf() * total
+	var chosen: WeaponPart = all_parts[0]
+	for i in all_parts.size():
+		roll -= weights[i]
+		if roll <= 0.0:
+			chosen = all_parts[i]
+			break
+
+	var chest = load("res://scripts/chest.gd").new()
+	chest.position = center
+	parent.add_child(chest)
+	chest.setup(chosen)
 
 func _spawn_treasure_item(parent: Node2D, center: Vector2):
 	var items = ItemDatabase.get_random_items(1)
@@ -1292,7 +1381,7 @@ func _spawn_shop(parent: Node2D, gp: Vector2i):
 		# height: 5 strip + 17 rarity + 22 name + 8 sep + n*20 stats + 8 sep + 22 price
 		var card_w  := 240
 		var card_h  := 82 + n_stats * 20
-		var card_ox := -card_w / 2
+		var card_ox := -card_w / 2.0
 		var card_oy := -(card_h + 88)
 
 		# Card background

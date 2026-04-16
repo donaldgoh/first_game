@@ -20,10 +20,10 @@ const BulletScene = preload("res://scenes/bullet.tscn")
 
 func _ready():
 	add_to_group("enemies")
-	var scale_factor = 1.0 + (GameManager.floor_number - 1) * 0.4
+	var scale_factor = 1.0 + (GameManager.floor_number - 1) * 0.55
 	max_health = int(max_health * scale_factor)
 	damage = int(damage * scale_factor)
-	move_speed = move_speed + (GameManager.floor_number - 1) * 3.0
+	move_speed = move_speed + (GameManager.floor_number - 1) * 5.0
 	current_health = max_health
 	call_deferred("_find_player")
 
@@ -54,25 +54,25 @@ func _physics_process(delta):
 			velocity = velocity.normalized() * move_speed
 			break
 
-	var fire_rate = 1.8 if phase == 1 else (0.9 if phase == 2 else 0.5)
+	var fire_rate = 1.5 if phase == 1 else (0.75 if phase == 2 else 0.35)
 	if attack_timer >= fire_rate:
 		attack_timer = 0.0
 		match phase:
 			1: _shoot_triple()
-			2: _shoot_spread(8)
-			3: _shoot_spread(12)
+			2: _shoot_spread(10)
+			3: _shoot_spread(14)
 
-	# Phase 2 at 50% HP
-	if current_health < max_health * 0.5 and phase == 1:
+	# Phase 2 at 60% HP
+	if current_health < max_health * 0.6 and phase == 1:
 		phase = 2
-		move_speed = 85.0
+		move_speed += 35.0
 		var v = get_node_or_null("Visual")
 		if v: v.color = Color(1.0, 0.4, 0.0, 1)
 
-	# Phase 3 at 20% HP - ENRAGED
-	if current_health < max_health * 0.2 and phase == 2:
+	# Phase 3 at 30% HP — ENRAGED
+	if current_health < max_health * 0.3 and phase == 2:
 		phase = 3
-		move_speed = 115.0
+		move_speed += 35.0
 		enraged = true
 		var v = get_node_or_null("Visual")
 		if v: v.color = Color(1.0, 0.0, 0.0, 1)
@@ -92,7 +92,7 @@ func _spawn_bullet(dir: Vector2):
 	var b = BulletScene.instantiate()
 	b.global_position = global_position
 	b.is_enemy_bullet = true
-	b.setup(dir, damage, 220.0, 1, 800.0)
+	b.setup(dir, damage, 270.0, 1, 900.0)
 	get_tree().current_scene.add_child(b)
 
 func take_damage(amount: int):
@@ -104,9 +104,42 @@ func die():
 	if is_dead: return
 	is_dead = true
 	_spawn_particles()
+	# Boss always drops a key — deferred so it runs outside the physics flush
+	var _drop_pos := global_position
+	call_deferred("_spawn_key_drop", _drop_pos)
 	GameManager.on_enemy_killed()
 	emit_signal("enemy_died", global_position, xp_value, gold_value)
 	queue_free()
+
+func _spawn_key_drop(pos: Vector2) -> void:
+	var key_node = Node2D.new()
+	key_node.global_position = pos
+
+	var icon = Label.new()
+	icon.text = "🔑"
+	icon.add_theme_font_size_override("font_size", 28)
+	icon.position = Vector2(-14, -16)
+	key_node.add_child(icon)
+
+	var area = Area2D.new()
+	area.collision_layer = 0; area.collision_mask = 1
+	var col = CollisionShape2D.new()
+	var shp = CircleShape2D.new(); shp.radius = 36.0
+	col.shape = shp; area.add_child(col)
+	key_node.add_child(area)
+
+	area.body_entered.connect(func(body):
+		if body.is_in_group("player"):
+			GameManager.add_key()
+			key_node.queue_free())
+
+	get_tree().current_scene.add_child(key_node)
+
+	# Bob animation — node-owned so it stops automatically when key_node is freed
+	var tween = icon.create_tween()
+	tween.set_loops()
+	tween.tween_property(icon, "position:y", -24.0, 0.5).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(icon, "position:y", -16.0, 0.5).set_trans(Tween.TRANS_SINE)
 
 func _spawn_particles():
 	for i in 10:

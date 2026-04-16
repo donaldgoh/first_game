@@ -8,6 +8,7 @@ signal enemy_died(pos, xp, gold)
 @export var xp_value: int = 10
 @export var gold_value: int = 2
 @export var contact_cooldown: float = 0.6
+@export var key_drop_chance: float = 0.03  # 3% chance to drop a key on death
 
 var current_health: int
 var player: Node2D = null
@@ -18,10 +19,10 @@ var knockback: Vector2 = Vector2.ZERO
 func _ready():
 	z_as_relative = false
 	add_to_group("enemies")
-	var scale_factor = 1.0 + (GameManager.floor_number - 1) * 0.35
+	var scale_factor = 1.0 + (GameManager.floor_number - 1) * 0.50
 	max_health = int(max_health * scale_factor)
 	damage = int(damage * scale_factor)
-	move_speed = move_speed + (GameManager.floor_number - 1) * 5.0
+	move_speed = move_speed + (GameManager.floor_number - 1) * 8.0
 	current_health = max_health
 	call_deferred("_find_player")
 
@@ -39,15 +40,15 @@ func _physics_process(delta):
 	else:
 		var dir = (player.global_position - global_position).normalized()
 
-		# Separation: push away from nearby enemies so they don't stack
+		# Separation: only push when very close so enemies don't form a wall
 		var sep = Vector2.ZERO
 		for e in get_tree().get_nodes_in_group("enemies"):
 			if e == self: continue
 			var diff = global_position - e.global_position
 			var dist = diff.length()
-			if dist < 40.0 and dist > 0.0:
-				sep += diff.normalized() * (40.0 - dist) / 40.0
-		dir = (dir + sep * 0.6).normalized()
+			if dist < 22.0 and dist > 0.0:
+				sep += diff.normalized() * (22.0 - dist) / 22.0
+		dir = (dir + sep * 0.25).normalized()
 
 		velocity = dir * move_speed
 
@@ -93,9 +94,45 @@ func die():
 	get_tree().current_scene.add_child(snd)
 	snd.play()
 	snd.finished.connect(snd.queue_free)
+	# Small chance to drop a key — deferred so it runs outside the physics flush
+	if randf() < key_drop_chance:
+		var _drop_pos := global_position
+		call_deferred("_spawn_key_drop", _drop_pos)
 	GameManager.on_enemy_killed()
 	emit_signal("enemy_died", global_position, xp_value, gold_value)
 	queue_free()
+
+func _spawn_key_drop(pos: Vector2) -> void:
+	var key_node = Node2D.new()
+	key_node.global_position = pos
+
+	# Visual — golden key icon
+	var icon = Label.new()
+	icon.text = "🔑"
+	icon.add_theme_font_size_override("font_size", 22)
+	icon.position = Vector2(-11, -14)
+	key_node.add_child(icon)
+
+	# Pickup area
+	var area = Area2D.new()
+	area.collision_layer = 0; area.collision_mask = 1
+	var col = CollisionShape2D.new()
+	var shp = CircleShape2D.new(); shp.radius = 28.0
+	col.shape = shp; area.add_child(col)
+	key_node.add_child(area)
+
+	area.body_entered.connect(func(body):
+		if body.is_in_group("player"):
+			GameManager.add_key()
+			key_node.queue_free())
+
+	get_tree().current_scene.add_child(key_node)
+
+	# Bob animation — node-owned so it stops automatically when key_node is freed
+	var tween = icon.create_tween()
+	tween.set_loops()
+	tween.tween_property(icon, "position:y", -20.0, 0.5).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(icon, "position:y", -14.0, 0.5).set_trans(Tween.TRANS_SINE)
 
 func _spawn_particles():
 	for i in 6:

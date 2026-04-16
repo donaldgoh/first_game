@@ -29,7 +29,8 @@ func _ready():
 	_update_label()
 	_populate_grid()
 	$VBox/Buttons/PlayButton.pressed.connect(func():
-		SceneLoader.goto("res://scenes/part_select.tscn"))
+		GameManager.reset()
+		SceneLoader.goto("res://scenes/dungeon.tscn"))
 	$VBox/Buttons/MainMenuButton.pressed.connect(func():
 		SceneLoader.goto("res://scenes/main_menu.tscn"))
 	$VBox/ContentRow/DetailPanel/DetailVBox/DetailUnlockBtn.pressed.connect(_unlock_selected)

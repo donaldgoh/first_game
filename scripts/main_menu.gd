@@ -9,8 +9,9 @@ func _ready():
 
 	$VBox/StartButton.pressed.connect(func():
 		_play_confirm()
+		GameManager.reset()
 		await get_tree().create_timer(0.1).timeout
-		SceneLoader.goto("res://scenes/part_select.tscn"))
+		SceneLoader.goto("res://scenes/dungeon.tscn"))
 	$VBox/UpgradeButton.pressed.connect(func():
 		_play_confirm()
 		await get_tree().create_timer(0.1).timeout

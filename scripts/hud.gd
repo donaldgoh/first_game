@@ -5,6 +5,7 @@ var boss_label: Label = null
 
 var _dash_bar: ProgressBar = null
 var _dash_label: Label = null
+var _key_label: Label = null
 var _dash_ready_color  := Color(0.30, 0.90, 1.00)   # cyan  — ready
 var _dash_charge_color := Color(0.20, 0.55, 0.75)   # muted — charging
 var _dash_bg_color     := Color(0.04, 0.10, 0.16)
@@ -18,6 +19,7 @@ func _ready():
 	GameManager.xp_changed.connect(func(c,r): $M/V/XP.max_value=r; $M/V/XP.value=c)
 	GameManager.level_up.connect(func(l): $M/V/Top/LvLabel.text="LV %d"%l)
 	GameManager.gold_changed.connect(func(g): $M/V/Top/GoldLabel.text = "%dg" % g)
+	GameManager.keys_changed.connect(func(k): if _key_label: _key_label.text = "🔑 %d" % k)
 	var pl = get_tree().get_first_node_in_group("player")
 	if pl:
 		pl.health_changed.connect(_on_hp)
@@ -152,7 +154,18 @@ func _style_hud():
 	$M/V/Top.add_child(coin_icon)
 	$M/V/Top.move_child(coin_icon, $M/V/Top.get_child_count() - 2)
 
-	# Pistol icon — appended after GoldLabel
+	# Key counter — shown after gold
+	var key_sep = Control.new()
+	key_sep.custom_minimum_size = Vector2(12, 0)
+	$M/V/Top.add_child(key_sep)
+	_key_label = Label.new()
+	_key_label.text = "🔑 0"
+	_key_label.add_theme_font_size_override("font_size", 14)
+	_key_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.30))
+	_key_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	$M/V/Top.add_child(_key_label)
+
+	# Pistol icon — appended after key counter
 	var gun_sep = Control.new()
 	gun_sep.custom_minimum_size = Vector2(10, 0)
 	$M/V/Top.add_child(gun_sep)
@@ -220,19 +233,19 @@ func _process(_delta):
 
 		# Dash cooldown bar
 		if _dash_bar:
-			var ready = pl.dash_timer <= 0.0
+			var dash_ready: bool = pl.dash_timer <= 0.0
 			var fill_ratio = 1.0 - clampf(pl.dash_timer / pl.dash_cooldown, 0.0, 1.0)
 			_dash_bar.value = fill_ratio
 
 			# Swap fill colour between charging and ready
 			var fill_style = _dash_bar.get_theme_stylebox("fill") as StyleBoxFlat
 			if fill_style:
-				fill_style.bg_color = _dash_ready_color if ready else _dash_charge_color
+				fill_style.bg_color = _dash_ready_color if dash_ready else _dash_charge_color
 
 			# Flash icon when ready, dim when charging
 			if _dash_label:
 				_dash_label.add_theme_color_override("font_color",
-					_dash_ready_color if ready else Color(0.4, 0.6, 0.7))
+					_dash_ready_color if dash_ready else Color(0.4, 0.6, 0.7))
 	var bosses = get_tree().get_nodes_in_group("enemies")
 	var boss = null
 	for e in bosses:

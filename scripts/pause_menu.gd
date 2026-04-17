@@ -12,10 +12,15 @@ func _ready():
 	$Panel/VBox/MenuButton.process_mode    = Node.PROCESS_MODE_ALWAYS
 	$Panel.hide()
 
-	$Panel/VBox/ResumeButton.pressed.connect(func(): toggle())
-	$Panel/VBox/SettingsButton.pressed.connect(_open_settings)
+	$Panel/VBox/ResumeButton.pressed.connect(func(): _sfx_confirm(); toggle())
+	$Panel/VBox/SettingsButton.pressed.connect(func(): _sfx_confirm(); _open_settings())
 	$Panel/VBox/MenuButton.pressed.connect(func():
-		SceneLoader.goto("res://scenes/main_menu.tscn"))
+		_sfx_confirm()
+		get_tree().paused = false
+		SceneLoader.goto("res://scenes/hub.tscn"))
+
+	for btn in [$Panel/VBox/ResumeButton, $Panel/VBox/SettingsButton, $Panel/VBox/MenuButton]:
+		btn.mouse_entered.connect(_sfx_hover)
 
 	# Build settings overlay (child of this CanvasLayer)
 	_settings = SettingsPanel.new()
@@ -91,7 +96,7 @@ func _style_panel():
 
 	# MenuButton
 	var mb = $Panel/VBox/MenuButton
-	mb.text = "🏠  Main Menu"
+	mb.text = "🏠  Return to Hub"
 	mb.custom_minimum_size = Vector2(280, 46)
 	mb.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	mb.add_theme_font_size_override("font_size", 15)
@@ -115,3 +120,17 @@ func _apply_btn(btn: Button, bg: Color, border: Color, text_color: Color = Color
 	btn.add_theme_stylebox_override("focus",   sn)
 	btn.add_theme_color_override("font_color",       text_color)
 	btn.add_theme_color_override("font_hover_color", Color.WHITE)
+
+func _sfx_hover() -> void:
+	var snd := AudioStreamPlayer.new()
+	snd.stream = load("res://sound_effects/menu_hover.mp3")
+	snd.volume_db = -8
+	add_child(snd); snd.play()
+	snd.finished.connect(snd.queue_free)
+
+func _sfx_confirm() -> void:
+	var snd := AudioStreamPlayer.new()
+	snd.stream = load("res://sound_effects/menu_confirm.mp3")
+	snd.volume_db = -5
+	add_child(snd); snd.play()
+	snd.finished.connect(snd.queue_free)

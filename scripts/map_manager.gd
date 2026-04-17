@@ -25,6 +25,7 @@ const STEP_Y  = CELL_H + COR_LEN * TILE          #  896 + 640 = 1536
 const EnemySpider   = preload("res://scenes/enemy_spider.tscn")
 const EnemyShooter  = preload("res://scenes/enemy_shooter.tscn")
 const BossScene     = preload("res://scenes/boss_enemy.tscn")
+const BossLaserScene = preload("res://scenes/boss_laser.tscn")
 const XPGem      = preload("res://scenes/xp_gem.tscn")
 const CoinScene  = preload("res://scenes/coin.tscn")
 
@@ -61,19 +62,23 @@ var door_locks: Dictionary = {}    # gp → Array[Node]  (Lock nodes from room p
 var door_triggers: Dictionary = {} # gp → Array[Area2D] (teleport triggers at each exit)
 var room_instances: Dictionary = {} # gp → Node2D  (the instanced room prefab, for finding pre-placed nodes)
 var enemies_alive: int = 0
+var _enemies_spawning: int = 0  # how many still pending spawn
 var is_room_cleared: bool = false
 var _nearby_shop_slot: Dictionary = {}
 var _door_cooldown: float = 0.0   # seconds remaining before door triggers are active again
 
 func _ready():
 	add_to_group("map_manager")
-	_generate_map()
-	await get_tree().process_frame  
-	_build_world()
-	await get_tree().process_frame  
 	var pl = get_tree().get_first_node_in_group("player")
+	if pl: pl.visible = false
+	_generate_map()
+	await get_tree().process_frame
+	_build_world()
+	await get_tree().process_frame
+	pl = get_tree().get_first_node_in_group("player")
 	if pl:
 		pl.global_position = _room_center(Vector2i.ZERO)
+		pl.visible = true
 	_enter_room(Vector2i.ZERO)
 
 func _unhandled_input(event):
@@ -245,6 +250,27 @@ func _generate_map():
 		if not reachable.has(pos):
 			rooms.erase(pos)
 
+	# ── Post-prune minimum guarantee ─────────────────────────────────────────
+	# BFS pruning can reduce below MIN_ROOMS on rare seeds — grow more if needed.
+	while rooms.size() < MIN_ROOMS:
+		var growable: Array = []
+		for pos in rooms.keys():
+			for d in direct:
+				if not rooms.has(pos + d):
+					growable.append(pos)
+					break
+		if growable.is_empty(): break
+		var base: Vector2i = growable[randi() % growable.size()]
+		var candidates: Array = []
+		for d in direct:
+			var nb: Vector2i = base + d
+			if not rooms.has(nb):
+				candidates.append(nb)
+		if candidates.is_empty(): continue
+		var np: Vector2i = candidates[randi() % candidates.size()]
+		rooms[np] = {"type": RoomType.NORMAL, "cleared": false,
+					 "visited": false, "activated": false, "shop_items": null}
+
 	# ── Build doors dict (stores the distance 1 or 2 for each open exit) ─────
 	# dist=1 → rooms are directly adjacent; dist=2 → one empty cell gap between them.
 	# The start room is not allowed a north exit by design.
@@ -265,6 +291,75 @@ func _generate_map():
 					continue
 				doors[dn] = 2
 		rooms[pos]["doors"] = doors
+
+	# ── Door-graph reachability check ────────────────────────────────────────
+	# The grid-BFS above uses raw adjacency.  Door-building has exclusions
+	# (e.g. start has no north exit) that can leave rooms with no physical path.
+	# Walk the actual door graph from start and drop anything unreachable.
+	var door_reach: Dictionary = {}
+	var dq: Array = [Vector2i.ZERO]
+	door_reach[Vector2i.ZERO] = true
+	while not dq.is_empty():
+		var cur: Vector2i = dq.pop_front()
+		for dn in rooms[cur].get("doors", {}):
+			var nb: Vector2i = cur + DIRS[dn] * int(rooms[cur]["doors"][dn])
+			if rooms.has(nb) and not door_reach.has(nb):
+				door_reach[nb] = true
+				dq.append(nb)
+	for pos in rooms.keys().duplicate():
+		if not door_reach.has(pos):
+			rooms.erase(pos)
+
+	# Rebuild doors after the purge (removed rooms leave stale entries on neighbours)
+	for pos in rooms.keys():
+		var doors2 = {}
+		for dn in DIRS:
+			if pos == Vector2i.ZERO and dn == "north": continue
+			var nb1: Vector2i = pos + DIRS[dn]
+			var nb2: Vector2i = pos + DIRS[dn] * 2
+			if rooms.has(nb1):
+				if nb1 == Vector2i.ZERO and dn == "south": continue
+				doors2[dn] = 1
+			elif rooms.has(nb2):
+				if nb2 == Vector2i.ZERO and dn == "south": continue
+				doors2[dn] = 2
+		rooms[pos]["doors"] = doors2
+
+	# Grow back to minimum if the door-purge dropped below it.
+	# Never grow north of start to avoid the same isolation problem.
+	while rooms.size() < MIN_ROOMS:
+		var growable2: Array = []
+		for pos in rooms.keys():
+			for d in direct:
+				var nb: Vector2i = pos + d
+				if not rooms.has(nb) and not (pos == Vector2i.ZERO and d == Vector2i(0, -1)):
+					growable2.append(pos)
+					break
+		if growable2.is_empty(): break
+		var base2: Vector2i = growable2[randi() % growable2.size()]
+		var cands2: Array = []
+		for d in direct:
+			var nb: Vector2i = base2 + d
+			if not rooms.has(nb) and not (base2 == Vector2i.ZERO and d == Vector2i(0, -1)):
+				cands2.append(nb)
+		if cands2.is_empty(): continue
+		var np2: Vector2i = cands2[randi() % cands2.size()]
+		rooms[np2] = {"type": RoomType.NORMAL, "cleared": false,
+					  "visited": false, "activated": false, "shop_items": null}
+		# Build doors for the new room and update its neighbours immediately
+		for pos in rooms.keys():
+			var doors2 = {}
+			for dn in DIRS:
+				if pos == Vector2i.ZERO and dn == "north": continue
+				var nb1: Vector2i = pos + DIRS[dn]
+				var nb2: Vector2i = pos + DIRS[dn] * 2
+				if rooms.has(nb1):
+					if nb1 == Vector2i.ZERO and dn == "south": continue
+					doors2[dn] = 1
+				elif rooms.has(nb2):
+					if nb2 == Vector2i.ZERO and dn == "south": continue
+					doors2[dn] = 2
+			rooms[pos]["doors"] = doors2
 
 	# ── Separate dead-ends (1 door) from throughways (2+ doors) ──────────────
 	# Done after doors dict so 2-step connections are counted correctly.
@@ -868,7 +963,7 @@ func _add_door_trigger(gp: Vector2i, dn: String, dest_gp: Vector2i, dest_dn: Str
 	area.body_entered.connect(func(body):
 		if not body.is_in_group("player"): return
 		if _door_cooldown > 0.0: return
-		_door_cooldown = 0.8
+		_door_cooldown = 0.1
 
 		# Compute arrival from the destination room's inner rect so the player
 		# always lands inside the playable floor, never in a wall tile.
@@ -1019,6 +1114,7 @@ func _spawn_enemies(gp: Vector2i):
 	var center = ir.get_center()
 	var count  = 5 + GameManager.floor_number * 4
 	var delay  = max(0.04, 0.18 - GameManager.floor_number * 0.01)
+	_enemies_spawning += count
 	for _i in count:
 		await get_tree().create_timer(delay).timeout
 		if not is_instance_valid(self): return
@@ -1049,6 +1145,7 @@ func _spawn_enemies(gp: Vector2i):
 		e.enemy_died.connect(_on_enemy_died.bind(gp))
 		get_tree().current_scene.add_child(e)
 		enemies_alive += 1
+		_enemies_spawning -= 1
 		# Elite variant — bigger, faster, tougher; chance grows per floor (cap 45 %)
 		var elite_chance = clamp(0.10 + (GameManager.floor_number - 1) * 0.06, 0.0, 0.45)
 		if randf() < elite_chance:
@@ -1064,7 +1161,8 @@ func _spawn_enemies(gp: Vector2i):
 func _spawn_boss(gp: Vector2i):
 	# Use the actual wall-tile bounds so large boss rooms are centred correctly.
 	var center = _room_world_rect(gp).get_center()
-	var b  = BossScene.instantiate()
+	var pool := [BossScene, BossLaserScene]
+	var b  = pool[randi() % pool.size()].instantiate()
 	b.global_position = center + Vector2(0, -100)
 	b.z_as_relative = false
 	b.z_index = clampi(int(b.global_position.y), -4095, 4095)
@@ -1081,16 +1179,17 @@ func _on_enemy_died(pos: Vector2, xp: int, gold: int, gp: Vector2i):
 	gem.global_position = pos
 	get_tree().current_scene.call_deferred("add_child", gem)
 
-	# Spawn one coin per gold_value, scattered around the death position
+	# Spawn coins — 40% chance per gold_value to drop a coin
 	for i in gold:
-		var coin = CoinScene.instantiate()
-		coin.gold_value = 1
-		var angle := randf() * TAU
-		var radius := randf_range(10.0, 36.0)
-		coin.global_position = pos + Vector2(cos(angle), sin(angle)) * radius
-		get_tree().current_scene.call_deferred("add_child", coin)
+		if randf() < 0.4:
+			var coin = CoinScene.instantiate()
+			coin.gold_value = 1
+			var angle := randf() * TAU
+			var radius := randf_range(10.0, 36.0)
+			coin.global_position = pos + Vector2(cos(angle), sin(angle)) * radius
+			get_tree().current_scene.call_deferred("add_child", coin)
 
-	if enemies_alive <= 0:
+	if enemies_alive <= 0 and _enemies_spawning <= 0:
 		call_deferred("_on_room_cleared", gp)
 
 func _on_room_cleared(gp: Vector2i):
@@ -1321,26 +1420,10 @@ func _spawn_shop(parent: Node2D, gp: Vector2i):
 	}
 	var rarity_names = {"common": "COMMON", "uncommon": "UNCOMMON", "rare": "RARE"}
 
-	# Shop sign
-	var title = Label.new()
-	title.text = "— SHOP —"
-	title.add_theme_font_size_override("font_size", 22)
-	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.position = center + Vector2(-200, -230)
-	title.custom_minimum_size = Vector2(400, 30)
-	parent.add_child(title)
+	# ── Special slots: Heart / Key (50% chance each, placed below main items) ─
+	_spawn_shop_special_slots(parent, center, room, gp)
 
-	var gold_hint = Label.new()
-	gold_hint.text = "Walk up to an item and press  [E]  to buy"
-	gold_hint.add_theme_font_size_override("font_size", 11)
-	gold_hint.add_theme_color_override("font_color", Color(0.45, 0.52, 0.68))
-	gold_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	gold_hint.position = center + Vector2(-200, -202)
-	gold_hint.custom_minimum_size = Vector2(400, 18)
-	parent.add_child(gold_hint)
-
-	var offsets = [Vector2(-280, 0), Vector2(0, 0), Vector2(280, 0)]
+	var offsets = [Vector2(-200, 0), Vector2(0, 0), Vector2(200, 0)]
 	for i in items.size():
 		if i >= offsets.size(): break
 		var item      = items[i]
@@ -1525,6 +1608,115 @@ func _spawn_shop(parent: Node2D, gp: Vector2i):
 			for sl in slot_data["stat_lbls"]: sl.visible = false
 			prompt_bg.visible  = false; prompt_lbl.visible = false)
 
+func _spawn_shop_special_slots(parent: Node2D, center: Vector2, room: Dictionary, _gp: Vector2i):
+	if not room.has("special_bought"):
+		room["special_bought"] = {}
+		room["has_heart"] = randf() < 0.5
+		room["has_key"]   = randf() < 0.5
+
+	var specials := []
+	if room["has_heart"]: specials.append({"kind": "heart", "label": "❤ Half Heart", "desc": "+1 Max HP", "cost": 20, "color": Color(0.85, 0.20, 0.25)})
+	if room["has_key"]:   specials.append({"kind": "key",   "label": "🔑 Key",        "desc": "Opens a chest", "cost": 18, "color": Color(0.90, 0.78, 0.15)})
+
+	var sx_offsets = [Vector2(-100, 130), Vector2(100, 130)]
+	for i in specials.size():
+		var sp       = specials[i]
+		var is_bought = room["special_bought"].get(sp["kind"], false)
+		var b_col    = sp["color"] as Color
+		var slot     = Node2D.new()
+		slot.position = center + sx_offsets[i]
+		parent.add_child(slot)
+
+		var container_tex = load("res://images/shop_container.png")
+		var ctr = Sprite2D.new()
+		ctr.texture = container_tex; ctr.scale = Vector2(3, 3); ctr.centered = true
+		ctr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		ctr.modulate = Color(0.45, 0.45, 0.48, 0.70) if is_bought else Color.WHITE
+		slot.add_child(ctr)
+
+		var sb = StaticBody2D.new(); sb.position = Vector2(0, 57)
+		var sc2 = CollisionShape2D.new(); var ss = RectangleShape2D.new()
+		ss.size = Vector2(144, 30); sc2.shape = ss; sb.add_child(sc2); slot.add_child(sb)
+
+		var card_w := 200; var card_h := 90
+		var card_ox := -card_w / 2.0; var card_oy := -(card_h + 88)
+
+		var card_bg = ColorRect.new()
+		card_bg.color = Color(0.04, 0.05, 0.12, 0.96)
+		card_bg.size = Vector2(card_w, card_h); card_bg.position = Vector2(card_ox, card_oy)
+		card_bg.visible = is_bought; slot.add_child(card_bg)
+
+		var strip = ColorRect.new()
+		strip.color = b_col.darkened(0.25); strip.size = Vector2(card_w, 5)
+		strip.position = Vector2(card_ox, card_oy); strip.visible = is_bought; slot.add_child(strip)
+
+		var name_lbl = Label.new()
+		name_lbl.text = "✅  Sold" if is_bought else sp["label"]
+		name_lbl.add_theme_font_size_override("font_size", 15)
+		name_lbl.add_theme_color_override("font_color", Color(0.45,0.45,0.50) if is_bought else Color(0.92,0.95,1.0))
+		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_lbl.position = Vector2(card_ox + 6, card_oy + 10); name_lbl.custom_minimum_size = Vector2(card_w - 12, 20)
+		name_lbl.visible = is_bought; slot.add_child(name_lbl)
+
+		var desc_lbl = Label.new()
+		desc_lbl.text = sp["desc"]
+		desc_lbl.add_theme_font_size_override("font_size", 12)
+		desc_lbl.add_theme_color_override("font_color", Color(0.65, 0.80, 0.65))
+		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		desc_lbl.position = Vector2(card_ox + 6, card_oy + 36); desc_lbl.custom_minimum_size = Vector2(card_w - 12, 18)
+		desc_lbl.visible = false; slot.add_child(desc_lbl)
+
+		var price_lbl = Label.new()
+		price_lbl.text = "💰  %d g" % sp["cost"] if not is_bought else ""
+		price_lbl.add_theme_font_size_override("font_size", 14)
+		price_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
+		price_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		price_lbl.position = Vector2(card_ox + 6, card_oy + 60); price_lbl.custom_minimum_size = Vector2(card_w - 12, 22)
+		price_lbl.visible = false; slot.add_child(price_lbl)
+
+		var prompt_bg = ColorRect.new()
+		prompt_bg.color = b_col.darkened(0.45); prompt_bg.size = Vector2(160, 30)
+		prompt_bg.position = Vector2(-80, 86); prompt_bg.visible = false; slot.add_child(prompt_bg)
+
+		var prompt_lbl = Label.new()
+		prompt_lbl.text = "[ E ]  Buy" if not is_bought else ""
+		prompt_lbl.add_theme_font_size_override("font_size", 14)
+		prompt_lbl.add_theme_color_override("font_color", Color(0.90, 0.95, 1.0))
+		prompt_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		prompt_lbl.position = Vector2(-80, 88); prompt_lbl.custom_minimum_size = Vector2(160, 26)
+		prompt_lbl.visible = false; slot.add_child(prompt_lbl)
+
+		var prox = Area2D.new()
+		prox.collision_layer = 0; prox.collision_mask = 1
+		prox.monitoring = true; prox.monitorable = false
+		var pc = CollisionShape2D.new(); var ps = RectangleShape2D.new()
+		ps.size = Vector2(200, 200); pc.shape = ps; prox.add_child(pc); slot.add_child(prox)
+
+		var slot_data = {
+			"kind": sp["kind"], "cost": sp["cost"], "room": room,
+			"bought": is_bought, "b_col": b_col,
+			"card_bg": card_bg, "strip": strip, "name_lbl": name_lbl,
+			"desc_lbl": desc_lbl, "price_lbl": price_lbl,
+			"prompt_bg": prompt_bg, "prompt_lbl": prompt_lbl, "container": ctr,
+		}
+
+		prox.body_entered.connect(func(body):
+			if not body.is_in_group("player"): return
+			if slot_data["bought"]: return
+			_nearby_shop_slot = slot_data
+			card_bg.visible = true; strip.visible = true; name_lbl.visible = true
+			desc_lbl.visible = true; price_lbl.visible = true
+			prompt_bg.visible = true; prompt_lbl.visible = true)
+
+		prox.body_exited.connect(func(body):
+			if not body.is_in_group("player"): return
+			if _nearby_shop_slot.get("kind", "") == slot_data["kind"]:
+				_nearby_shop_slot = {}
+			card_bg.visible = slot_data["bought"]; strip.visible = slot_data["bought"]
+			name_lbl.visible = slot_data["bought"]
+			desc_lbl.visible = false; price_lbl.visible = false
+			prompt_bg.visible = false; prompt_lbl.visible = false)
+
 # Converts an item's numeric fields into display rows for the shop card.
 # Each entry: { text, positive } — positive drives the colour (green/red).
 func _item_stat_lines(item: Dictionary) -> Array:
@@ -1536,7 +1728,6 @@ func _item_stat_lines(item: Dictionary) -> Array:
 		["damage",        "Damage",        "int",   true ],
 		["max_health",    "Max HP",        "int",   null ],
 		["speed",         "Move Speed",    "int",   null ],
-		["armor",         "Armor",         "int",   true ],
 		["attack_speed",  "Atk Speed",     "float", true ],
 		["pickup_radius", "Pickup Range",  "int",   true ],
 		["lifesteal",     "Lifesteal",     "life",  true ],
@@ -1580,15 +1771,33 @@ func _buy_from_shop(slot: Dictionary):
 			pb.color = orig_color
 		return
 	var pl_node = get_tree().get_first_node_in_group("player")
-	if pl_node: pl_node.apply_item(slot["item"])
-	slot["room"]["shop_bought"][slot["index"]] = true
+
+	# Handle special slots (heart / key)
+	if slot.has("kind"):
+		match slot["kind"]:
+			"heart":
+				GameManager.p_max_health += 1
+				GameManager.p_current_health = min(GameManager.p_current_health + 1, GameManager.p_max_health)
+				if pl_node:
+					pl_node.max_health = GameManager.p_max_health
+					pl_node.current_health = GameManager.p_current_health
+					pl_node.emit_signal("health_changed", pl_node.current_health, pl_node.max_health)
+			"key":
+				GameManager.add_key()
+		slot["room"]["special_bought"][slot["kind"]] = true
+	else:
+		if pl_node: pl_node.apply_item(slot["item"])
+		slot["room"]["shop_bought"][slot["index"]] = true
+
 	slot["bought"] = true
 	# Update visuals to sold state
-	slot["name_lbl"].text  = "✅  Sold"
+	slot["name_lbl"].text = "✅  Sold"
 	slot["name_lbl"].add_theme_color_override("font_color", Color(0.45, 0.45, 0.50))
-	for sl in slot["stat_lbls"]: sl.visible = false
-	slot["stat_div"].visible   = false
-	slot["price_div"].visible  = false
+	if slot.has("stat_lbls"):
+		for sl in slot["stat_lbls"]: sl.visible = false
+	if slot.has("stat_div"):   slot["stat_div"].visible  = false
+	if slot.has("price_div"):  slot["price_div"].visible = false
+	if slot.has("desc_lbl"):   slot["desc_lbl"].visible  = false
 	slot["price_lbl"].visible  = false
 	slot["prompt_bg"].visible  = false
 	slot["prompt_lbl"].visible = false
@@ -1596,7 +1805,7 @@ func _buy_from_shop(slot: Dictionary):
 	slot["strip"].visible      = true
 	slot["name_lbl"].visible   = true
 	slot["container"].modulate = Color(0.45, 0.45, 0.48, 0.70)
-	slot["chip"].modulate      = Color(0.35, 0.35, 0.38, 0.45)
+	if slot.has("chip"): slot["chip"].modulate = Color(0.35, 0.35, 0.38, 0.45)
 	_nearby_shop_slot = {}
 
 func open_doors(): pass

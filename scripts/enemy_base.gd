@@ -7,7 +7,7 @@ signal enemy_died(pos, xp, gold)
 @export var damage: int = 1   # half-hearts (2 = 1 full heart of damage)
 @export var xp_value: int = 10
 @export var gold_value: int = 2
-@export var contact_cooldown: float = 0.6
+@export var contact_cooldown: float = 0.3
 @export var key_drop_chance: float = 0.03  # 3% chance to drop a key on death
 
 var current_health: int
@@ -30,39 +30,49 @@ func _find_player():
 	player = get_tree().get_first_node_in_group("player")
 
 func _physics_process(delta):
-	z_index = clampi(int(global_position.y), -4095, 4095)
-	if is_dead or player == null: return
+	z_index = clampi(int(global_position.y) - 1, -4095, 4095)
+	if is_dead or player == null:
+		return
 	contact_timer -= delta
 
 	if knockback.length() > 10:
 		velocity = knockback
 		knockback = knockback.lerp(Vector2.ZERO, delta * 8.0)
-	else:
-		var dir = (player.global_position - global_position).normalized()
 
-		# Separation: only push when very close so enemies don't form a wall
-		var sep = Vector2.ZERO
-		for e in get_tree().get_nodes_in_group("enemies"):
-			if e == self: continue
-			var diff = global_position - e.global_position
-			var dist = diff.length()
-			if dist < 22.0 and dist > 0.0:
-				sep += diff.normalized() * (22.0 - dist) / 22.0
-		dir = (dir + sep * 0.25).normalized()
+	# Aim at the centre of the player's collision box, not the feet origin.
+	# The player's Col is offset Vector2(-1, -16.8125) from global_position,
+	# so approaching this point keeps all contact distances symmetric.
+	var player_centre : Vector2 = player.global_position + Vector2(-1.0, -32.0)
 
-		velocity = dir * move_speed
+	var dir : Vector2 = (player_centre - global_position).normalized()
 
+	# Separation: push away from nearby enemies (proximity-based, no physics needed)
+	var sep : Vector2 = Vector2.ZERO
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e == self: continue
+		var diff : Vector2 = global_position - e.global_position
+		var d : float = diff.length()
+		if d < 40.0 and d > 0.0:
+			sep += diff.normalized() * (40.0 - d) / 40.0
+	dir = (dir + sep * 0.4).normalized()
+
+	velocity = dir * move_speed
 	move_and_slide()
 
-	# Deal contact damage and steer sideways to prevent getting pinned on the player
+	# Contact damage — measured from the collision-box centre so the threshold
+	# is consistent regardless of approach direction.
+	# Max physical contact distance from this centre is ~56 px (corner approach);
+	# 64 px gives a reliable margin above that.
+	var dist_to_centre : float = global_position.distance_to(player_centre)
+	if dist_to_centre < 72.0 and contact_timer <= 0.0:
+		player.take_damage(damage)
+		contact_timer = contact_cooldown
+
+	# Perpendicular steering on direct physics contact
 	for i in get_slide_collision_count():
 		if get_slide_collision(i).get_collider() == player:
-			if contact_timer <= 0:
-				player.take_damage(damage)
-				contact_timer = contact_cooldown
-			# Perpendicular steering — slide around the player instead of locking
-			var to_player = (player.global_position - global_position)
-			var perp = Vector2(-to_player.y, to_player.x).normalized()
+			var to_pl : Vector2 = player.global_position - global_position
+			var perp : Vector2 = Vector2(-to_pl.y, to_pl.x).normalized()
 			if velocity.dot(perp) < 0.0:
 				perp = -perp
 			velocity = (velocity.normalized() * 0.4 + perp * 0.6).normalized() * move_speed
@@ -75,9 +85,9 @@ func take_damage(amount: int):
 		knockback = (global_position - player.global_position).normalized() * 120.0
 	var v = get_node_or_null("Visual")
 	if v:
-		v.modulate = Color(8, 8, 8)   # bright-white flash, works on any CanvasItem
+		v.self_modulate = Color(8, 8, 8)   # flash only this node, not shadow children
 		await get_tree().create_timer(0.08).timeout
-		if is_instance_valid(v): v.modulate = Color.WHITE
+		if is_instance_valid(v): v.self_modulate = Color.WHITE
 	if current_health <= 0: die()
 
 func get_color() -> Color:

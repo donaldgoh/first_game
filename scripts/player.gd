@@ -8,7 +8,6 @@ signal player_died
 @export var damage: int = 10
 @export var attack_speed: float = 1.0
 @export var pickup_radius: float = 80.0
-@export var armor: int = 0
 @export var lifesteal: int = 0
 @export var luck: float = 0.0
 
@@ -22,6 +21,8 @@ var dash_velocity: Vector2 = Vector2.ZERO
 var dash_duration: float = 0.15
 var dash_duration_max: float = 0.15
 var _facing_left: bool = false
+var _iframes: float = 0.0
+const IFRAME_DURATION := 0.5
 
 # ── Out-of-combat speed boost ─────────────────────────────────────────────────
 # When no enemies are alive the player moves faster to make room traversal feel
@@ -38,7 +39,6 @@ func _ready():
 	damage = GameManager.p_damage
 	attack_speed = GameManager.p_attack_speed
 	pickup_radius = GameManager.p_pickup_radius
-	armor = GameManager.p_armor
 	lifesteal = GameManager.p_lifesteal
 	current_health = GameManager.p_current_health
 	_effective_speed = move_speed   # start at combat speed; ramps up once room clears
@@ -53,6 +53,7 @@ func _physics_process(delta):
 	# Y-sort: higher Y (further down screen = closer to viewer) draws on top
 	z_index = clampi(int(global_position.y), -4095, 4095)
 	dash_timer -= delta
+	_iframes -= delta
 
 	# Smoothly ramp between combat speed and explore speed depending on whether
 	# any enemies are currently alive in the scene.
@@ -87,8 +88,9 @@ func _physics_process(delta):
 	move_and_slide()
 
 func take_damage(amount: int):
-	if is_dashing or is_dead: return
-	current_health -= max(1, amount - armor)
+	if is_dashing or is_dead or _iframes > 0: return
+	_iframes = IFRAME_DURATION
+	current_health -= max(1, amount)
 	current_health = max(0, current_health)
 	emit_signal("health_changed", current_health, max_health)
 	var v = get_node_or_null("Visual")
@@ -139,7 +141,6 @@ func apply_item(item: Dictionary):
 	if item.has("speed"): move_speed += item.speed
 	if item.has("damage"): damage += item.damage
 	if item.has("attack_speed"): attack_speed += item.attack_speed
-	if item.has("armor"): armor += item.armor
 	if item.has("pickup_radius"): pickup_radius += item.pickup_radius
 	if item.has("lifesteal"): lifesteal += item.lifesteal
 	if item.has("luck"): luck += item.luck
@@ -149,7 +150,6 @@ func apply_item(item: Dictionary):
 	GameManager.p_damage = damage
 	GameManager.p_attack_speed = attack_speed
 	GameManager.p_pickup_radius = pickup_radius
-	GameManager.p_armor = armor
 	GameManager.p_lifesteal = lifesteal
 	GameManager.p_current_health = current_health
 	GameManager.p_luck = luck

@@ -15,6 +15,8 @@ var phase: int = 1
 var is_dead: bool = false
 var contact_timer: float = 0.0
 var enraged: bool = false
+var _iframes: float = 0.0
+const IFRAME_DURATION := 0.12
 
 const BulletScene = preload("res://scenes/bullet.tscn")
 
@@ -34,6 +36,7 @@ func _physics_process(delta):
 	if is_dead or player == null: return
 	contact_timer -= delta
 	attack_timer += delta
+	_iframes -= delta
 	var dir = (player.global_position - global_position).normalized()
 	velocity = dir * move_speed
 	move_and_slide()
@@ -68,6 +71,7 @@ func _physics_process(delta):
 		move_speed += 35.0
 		var v = get_node_or_null("Visual")
 		if v: v.color = Color(1.0, 0.4, 0.0, 1)
+		_phase_transition("⚠ ENRAGED!", Color(1.0, 0.4, 0.0))
 
 	# Phase 3 at 30% HP — ENRAGED
 	if current_health < max_health * 0.3 and phase == 2:
@@ -76,6 +80,14 @@ func _physics_process(delta):
 		enraged = true
 		var v = get_node_or_null("Visual")
 		if v: v.color = Color(1.0, 0.0, 0.0, 1)
+		_phase_transition("💀 BERSERK!", Color(1.0, 0.1, 0.1))
+
+func _phase_transition(text: String, color: Color):
+	var dungeon = get_tree().current_scene
+	if dungeon.has_method("shake"):
+		dungeon.shake(2.5)
+	if dungeon.has_method("show_notification"):
+		dungeon.show_notification(text, color)
 
 func _shoot_triple():
 	if player == null: return
@@ -96,8 +108,14 @@ func _spawn_bullet(dir: Vector2):
 	get_tree().current_scene.add_child(b)
 
 func take_damage(amount: int):
-	if is_dead: return
+	if is_dead or _iframes > 0: return
+	_iframes = IFRAME_DURATION
 	current_health -= amount
+	var v = get_node_or_null("Visual")
+	if v:
+		v.self_modulate = Color(8, 8, 8)
+		await get_tree().create_timer(0.08).timeout
+		if is_instance_valid(v): v.self_modulate = Color.WHITE
 	if current_health <= 0: die()
 
 func die():
@@ -107,6 +125,14 @@ func die():
 	# Boss always drops a key — deferred so it runs outside the physics flush
 	var _drop_pos := global_position
 	call_deferred("_spawn_key_drop", _drop_pos)
+	# Award forge coins: harder floors give more (floor 1 = 1 coin … floor 5+ = 5 coins)
+	var coins := mini(GameManager.floor_number, 5)
+	GameManager.add_forge_coins(coins)
+	var dungeon = get_tree().current_scene
+	if dungeon.has_method("show_notification"):
+		dungeon.show_notification(
+			"⚒  +%d Forge Coin%s" % [coins, "s" if coins != 1 else ""],
+			Color(0.95, 0.72, 0.25))
 	GameManager.on_enemy_killed()
 	emit_signal("enemy_died", global_position, xp_value, gold_value)
 	queue_free()

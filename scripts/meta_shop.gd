@@ -26,23 +26,25 @@ var _selected_state: PartState = PartState.UNKNOWN
 # ── Lifecycle ──────────────────────────────────────────────────────────────────
 func _ready():
 	_style()
-	_update_label()
+	$VBox/GoldLabel.visible = false
 	_populate_grid()
-	$VBox/Buttons/PlayButton.pressed.connect(func():
-		GameManager.reset()
-		SceneLoader.goto("res://scenes/dungeon.tscn"))
-	$VBox/Buttons/MainMenuButton.pressed.connect(func():
-		SceneLoader.goto("res://scenes/main_menu.tscn"))
-	$VBox/ContentRow/DetailPanel/DetailVBox/DetailUnlockBtn.pressed.connect(_unlock_selected)
+	$VBox/Buttons/PlayButton.pressed.connect(func(): _sfx_confirm(); SceneLoader.goto("res://scenes/hub.tscn"))
+	$VBox/Buttons/PlayButton.mouse_entered.connect(_sfx_hover)
+	$VBox/Buttons/MainMenuButton.visible = false
+	var ub := $VBox/ContentRow/DetailPanel/DetailVBox/DetailUnlockBtn
+	ub.pressed.connect(_unlock_selected)
+	ub.mouse_entered.connect(_sfx_hover)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("interact"):
+		_sfx_confirm()
+		SceneLoader.goto("res://scenes/hub.tscn")
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 func _get_state(part: WeaponPart) -> PartState:
 	if part.id in GameManager.unlocked_parts: return PartState.UNLOCKED
 	if part.id in GameManager.seen_parts:     return PartState.SEEN
 	return PartState.UNKNOWN
-
-func _update_label():
-	$VBox/GoldLabel.text = "💰  Lifetime Gold: %dg" % GameManager.lifetime_gold
 
 # ── Grid population ────────────────────────────────────────────────────────────
 func _populate_grid():
@@ -92,7 +94,8 @@ func _populate_grid():
 				btn.add_theme_color_override("font_color",       rcol)
 				btn.add_theme_color_override("font_hover_color", Color.WHITE)
 
-		btn.pressed.connect(func(): _show_detail(part))
+		btn.pressed.connect(func(): _sfx_hover(); _show_detail(part))
+		btn.mouse_entered.connect(_sfx_hover)
 		container.add_child(btn)
 
 func _card_style(bg: Color, border: Color) -> StyleBoxFlat:
@@ -134,10 +137,10 @@ func _show_detail(part: WeaponPart):
 			dn.add_theme_color_override("font_color", rcol.darkened(0.20))
 			dd.text = "You've encountered this chip in a run.\nUnlock it to reveal its full abilities."
 			dd.add_theme_color_override("font_color", Color(0.62, 0.72, 0.85))
-			ds.text = "👁  SEEN   ·   %s   ·   %dg to unlock" % [RARITY_NAME.get(part.rarity, "?"), part.cost]
+			ds.text = "👁  SEEN   ·   %s" % RARITY_NAME.get(part.rarity, "?")
 			ds.add_theme_color_override("font_color", rcol.darkened(0.10))
 			ds.add_theme_font_size_override("font_size", 14)
-			ub.text    = "🔓  UNLOCK  —  %dg" % part.cost
+			ub.text    = "🔓  UNLOCK"
 			ub.visible = true
 
 		PartState.UNLOCKED:
@@ -154,13 +157,12 @@ func _show_detail(part: WeaponPart):
 func _unlock_selected():
 	if _selected_part == null: return
 	if _selected_state == PartState.UNLOCKED: return
-	if GameManager.spend_lifetime_gold(_selected_part.cost):
-		if _selected_part.id not in GameManager.unlocked_parts:
-			GameManager.unlocked_parts.append(_selected_part.id)
-		GameManager.save_meta()
-		_update_label()
-		_populate_grid()
-		_show_detail(_selected_part)
+	_sfx_confirm()
+	if _selected_part.id not in GameManager.unlocked_parts:
+		GameManager.unlocked_parts.append(_selected_part.id)
+	GameManager.save_meta()
+	_populate_grid()
+	_show_detail(_selected_part)
 
 # ── Styling ────────────────────────────────────────────────────────────────────
 func _style():
@@ -169,7 +171,7 @@ func _style():
 
 	# Title
 	var title = Label.new()
-	title.text = "📦  COLLECTION"
+	title.text = "📦  MERCHANT  —  Collection"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", Color(0.38, 0.88, 1.0))
@@ -211,16 +213,10 @@ func _style():
 	# Bottom buttons
 	$VBox/Buttons.add_theme_constant_override("separation", 16)
 	var pb = $VBox/Buttons/PlayButton
-	pb.text = "▶  Play"
+	pb.text = "◀  Back to Hub"
 	pb.custom_minimum_size = Vector2(200, 48)
 	pb.add_theme_font_size_override("font_size", 16)
-	_apply_btn(pb, Color(0.05, 0.16, 0.10), Color(0.18, 0.72, 0.38), Color(0.38, 1.0, 0.52))
-
-	var mb = $VBox/Buttons/MainMenuButton
-	mb.text = "🏠  Main Menu"
-	mb.custom_minimum_size = Vector2(200, 48)
-	mb.add_theme_font_size_override("font_size", 16)
-	_apply_btn(mb, Color(0.10, 0.05, 0.06), Color(0.45, 0.12, 0.14), Color(0.85, 0.42, 0.44))
+	_apply_btn(pb, Color(0.06, 0.10, 0.20), Color(0.18, 0.44, 0.85), Color(0.55, 0.82, 1.0))
 
 func _apply_btn(btn: Button, bg: Color, border: Color, text_color: Color = Color(0.88, 0.93, 1.0)):
 	var sn = StyleBoxFlat.new()
@@ -236,3 +232,17 @@ func _apply_btn(btn: Button, bg: Color, border: Color, text_color: Color = Color
 	btn.add_theme_stylebox_override("focus",   sn)
 	btn.add_theme_color_override("font_color",       text_color)
 	btn.add_theme_color_override("font_hover_color", Color.WHITE)
+
+func _sfx_hover() -> void:
+	var snd := AudioStreamPlayer.new()
+	snd.stream = load("res://sound_effects/menu_hover.mp3")
+	snd.volume_db = -8
+	add_child(snd); snd.play()
+	snd.finished.connect(snd.queue_free)
+
+func _sfx_confirm() -> void:
+	var snd := AudioStreamPlayer.new()
+	snd.stream = load("res://sound_effects/menu_confirm.mp3")
+	snd.volume_db = -5
+	add_child(snd); snd.play()
+	snd.finished.connect(snd.queue_free)

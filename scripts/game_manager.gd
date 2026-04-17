@@ -26,7 +26,6 @@ var p_move_speed: float = 320.0
 var p_damage: int = 10
 var p_attack_speed: float = 1.0
 var p_pickup_radius: float = 80.0
-var p_armor: int = 0
 var p_lifesteal: int = 0
 var p_luck: float = 0.0
 
@@ -42,8 +41,16 @@ var inventory_parts: Array = []          # part IDs in the bag (unequipped)
 var equipped_parts: Array  = ["","",""]  # 3 equipped slots; "" = empty
 var inventory_open: bool   = false       # true while the inventory UI is visible
 
-# Lifetime gold (used for unlocking weapon parts)
-var lifetime_gold: int = 0
+# Permanent upgrades purchased at the Blacksmith in the hub (persist across runs)
+var perm_hp:     int = 0   # each level → +2 max health
+var perm_damage: int = 0   # each level → +2 damage
+var perm_speed:  int = 0   # each level → +20 move speed
+# Forge coins — earned by killing bosses only; used exclusively at the Blacksmith
+var forge_coins: int = 0
+
+# Hub world — remember where the player was standing so returning from
+# the collection doesn't teleport them back to the default spawn point.
+var hub_player_pos: Vector2 = Vector2.ZERO
 
 # Parts the player has encountered in a run (but not necessarily unlocked)
 var seen_parts: Array = []
@@ -71,7 +78,6 @@ func add_xp(amount: int):
 
 func add_gold(amount: int):
 	gold += amount
-	lifetime_gold += amount
 	emit_signal("gold_changed", gold)
 
 func spend_gold(amount: int) -> bool:
@@ -81,9 +87,13 @@ func spend_gold(amount: int) -> bool:
 		return true
 	return false
 
-func spend_lifetime_gold(amount: int) -> bool:
-	if lifetime_gold >= amount:
-		lifetime_gold -= amount
+func add_forge_coins(amount: int) -> void:
+	forge_coins += amount
+	save_meta()
+
+func spend_forge_coins(amount: int) -> bool:
+	if forge_coins >= amount:
+		forge_coins -= amount
 		save_meta()
 		return true
 	return false
@@ -118,15 +128,14 @@ func reset_run():
 
 func reset():
 	reset_run()
-	p_max_health = 6   # 3 full hearts
+	p_max_health     = 6 + perm_hp * 2          # base 3 hearts + permanent upgrades
 	p_current_health = p_max_health
-	p_move_speed = 320.0
-	p_damage = 10
-	p_attack_speed = 1.0
-	p_pickup_radius = 80.0
-	p_armor = 0
-	p_lifesteal = 0
-	p_luck = 0.0
+	p_move_speed     = 320.0 + perm_speed * 20.0
+	p_damage         = 10 + perm_damage * 2
+	p_attack_speed   = 1.0
+	p_pickup_radius  = 80.0
+	p_lifesteal      = 0
+	p_luck           = 0.0
 
 # ── Inventory helpers ─────────────────────────────────────────────────────────
 
@@ -196,9 +205,12 @@ func save_meta():
 	var f = FileAccess.open("user://meta.dat", FileAccess.WRITE)
 	if f:
 		f.store_var({
-			"lifetime_gold":   lifetime_gold,
 			"unlocked_parts":  unlocked_parts,
 			"seen_parts":      seen_parts,
+			"perm_hp":         perm_hp,
+			"perm_damage":     perm_damage,
+			"perm_speed":      perm_speed,
+			"forge_coins":     forge_coins,
 		})
 		f.close()
 
@@ -209,6 +221,9 @@ func load_meta():
 		var data = f.get_var()
 		f.close()
 		if data:
-			lifetime_gold  = data.get("lifetime_gold", 0)
 			unlocked_parts = data.get("unlocked_parts", [])
 			seen_parts     = data.get("seen_parts", [])
+			perm_hp        = data.get("perm_hp",     0)
+			perm_damage    = data.get("perm_damage",  0)
+			perm_speed     = data.get("perm_speed",   0)
+			forge_coins    = data.get("forge_coins",  0)

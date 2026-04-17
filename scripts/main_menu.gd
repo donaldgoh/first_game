@@ -9,18 +9,12 @@ func _ready():
 
 	$VBox/StartButton.pressed.connect(func():
 		_play_confirm()
-		GameManager.reset()
 		await get_tree().create_timer(0.1).timeout
-		SceneLoader.goto("res://scenes/dungeon.tscn"))
-	$VBox/UpgradeButton.pressed.connect(func():
-		_play_confirm()
-		await get_tree().create_timer(0.1).timeout
-		SceneLoader.goto("res://scenes/meta_shop.tscn"))
+		SceneLoader.goto("res://scenes/hub.tscn"))
 	$VBox/SettingsButton.pressed.connect(_open_settings)
 	$VBox/QuitButton.pressed.connect(func(): get_tree().quit())
 
 	$VBox/StartButton.mouse_entered.connect(func():   _play_hover())
-	$VBox/UpgradeButton.mouse_entered.connect(func(): _play_hover())
 	$VBox/SettingsButton.mouse_entered.connect(func(): _play_hover())
 	$VBox/QuitButton.mouse_entered.connect(func():    _play_hover())
 
@@ -51,21 +45,13 @@ func _style():
 	title.add_theme_color_override("font_color", Color(0.38, 0.88, 1.0))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
-	# StartButton
+	# StartButton — "Continue" for returning players, "New Game" for first-timers
 	var sb = $VBox/StartButton
-	sb.text = "▶  Start Run"
+	sb.text = "▶  Continue" if FileAccess.file_exists("user://meta.dat") else "▶  New Game"
 	sb.custom_minimum_size = Vector2(340, 52)
 	sb.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	sb.add_theme_font_size_override("font_size", 16)
 	_apply_btn(sb, Color(0.05, 0.16, 0.10), Color(0.18, 0.72, 0.38), Color(0.4, 1.0, 0.55))
-
-	# UpgradeButton
-	var ub = $VBox/UpgradeButton
-	ub.text = "⬆  Hub & Upgrades"
-	ub.custom_minimum_size = Vector2(340, 52)
-	ub.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	ub.add_theme_font_size_override("font_size", 16)
-	_apply_btn(ub, Color(0.06, 0.10, 0.20), Color(0.18, 0.44, 0.85), Color(0.55, 0.82, 1.0))
 
 	# SettingsButton
 	var stb = $VBox/SettingsButton

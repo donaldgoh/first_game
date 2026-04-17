@@ -4,12 +4,11 @@ const CHARACTERS = [
 	{
 		"id": "warrior",
 		"name": "⚔️ Warrior",
-		"desc": "High HP and armor.\nPassive: Takes 20% less damage.",
+		"desc": "High HP and resilience.\nPassive: Takes 20% less damage.",
 		"max_health": 160,
 		"move_speed": 170.0,
 		"damage": 10,
 		"attack_speed": 0.9,
-		"armor": 3,
 		"pickup_radius": 80.0,
 		"lifesteal": 0,
 		"luck": 0.0,
@@ -23,7 +22,6 @@ const CHARACTERS = [
 		"move_speed": 270.0,
 		"damage": 12,
 		"attack_speed": 1.3,
-		"armor": 0,
 		"pickup_radius": 120.0,
 		"lifesteal": 0,
 		"luck": 0.5,
@@ -37,7 +35,6 @@ const CHARACTERS = [
 		"move_speed": 200.0,
 		"damage": 20,
 		"attack_speed": 1.8,
-		"armor": 0,
 		"pickup_radius": 100.0,
 		"lifesteal": 0,
 		"luck": 0.0,
@@ -68,7 +65,6 @@ func _select(ch: Dictionary):
 	GameManager.p_move_speed = ch.move_speed + GameManager.perm_bonus_speed
 	GameManager.p_damage = ch.damage + GameManager.perm_bonus_damage
 	GameManager.p_attack_speed = ch.attack_speed
-	GameManager.p_armor = ch.armor + GameManager.perm_bonus_armor
 	GameManager.p_pickup_radius = ch.pickup_radius
 	GameManager.p_lifesteal = ch.lifesteal
 	GameManager.p_luck = ch.luck + GameManager.perm_bonus_luck

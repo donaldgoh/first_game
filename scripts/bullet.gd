@@ -23,6 +23,8 @@ var ignore_walls: bool = false   # sky-strike bullets fly through walls
 
 # Bounce guard — prevent multiple wall bodies triggering _hit_wall in the same frame
 var _bounce_frame: int = -1
+# Cached player RID so the wall raycast never hits the player's own body
+var _player_rid: RID = RID()
 
 func setup(dir, dmg, spd, prc, rng):
 	direction = dir
@@ -34,6 +36,9 @@ func setup(dir, dmg, spd, prc, rng):
 func _ready():
 	z_as_relative = false
 	body_entered.connect(_on_body_entered)
+	var pl := get_tree().get_first_node_in_group("player")
+	if pl:
+		_player_rid = pl.get_rid()
 
 func _physics_process(delta):
 	z_index = clampi(int(global_position.y), -4096, 4096)
@@ -56,6 +61,26 @@ func _physics_process(delta):
 		speed = maxf(speed - speed * 4.0 * delta, 40.0)
 
 	var m = direction * speed * delta
+
+	# Proactive wall-hit raycast — more reliable than Area2D body_entered for
+	# fast/direct-position-set bullets that can slip between overlap checks.
+	# Excludes both the bullet itself and the player so downward shots aren't
+	# blocked by the player's own collision shape (also on layer 1).
+	if not ignore_walls:
+		var space := get_world_2d().direct_space_state
+		var ray := PhysicsRayQueryParameters2D.create(
+			global_position,
+			global_position + direction * (m.length() + 8.0),
+			1  # layer 1 = walls only
+		)
+		ray.exclude = [get_rid()]
+		if _player_rid.is_valid():
+			ray.exclude.append(_player_rid)
+		var _ray_result := space.intersect_ray(ray)
+		if _ray_result and not _ray_result["collider"].is_in_group("player"):
+			_hit_wall()
+			return
+
 	position += m
 	traveled += m.length()
 	if traveled >= max_range:

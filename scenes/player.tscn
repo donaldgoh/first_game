@@ -189,7 +189,7 @@ animations = [{
 }]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_qlg0r"]
-size = Vector2(52, 46.75)
+size = Vector2(54, 64)
 
 [node name="Player" type="CharacterBody2D" unique_id=1279744909]
 z_index = 2
@@ -206,7 +206,7 @@ animation = &"idle"
 frame_progress = 0.27277663
 
 [node name="Col" type="CollisionShape2D" parent="." unique_id=2118864027]
-position = Vector2(-1, -25)
+position = Vector2(-1, -32)
 shape = SubResource("RectangleShape2D_qlg0r")
 
 [node name="WeaponAuto" type="Node2D" parent="." unique_id=1172181760]
